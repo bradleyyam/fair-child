@@ -1,0 +1,63 @@
+---
+title: "fairchild_fake_data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Let's make some fake data
+
+```{r cars}
+library(fakeR)
+library(tidyverse)
+```
+
+```{r pressure, echo=FALSE}
+preg_df <- data.frame(age=c(15,26,21,23),
+                      race=c("white", "black", "asian", "amerindian"),
+                      married=c(0,1,1,0),
+                      education=c("High School", "College","Doctorate","8thGrade"),
+                      prev_term=c(1,1,2,0),
+                      WIC=c(0,1,0,1),
+                      smoking=c(0,1,7,20),
+                      BMI=c(18.5,21.2,18.1,27.8),
+                      height=c(62,51,72,64),
+                      weight=c(150,122,143,111),
+                      parity=c(1,1,1,0),
+                      diabetes=c(1,0,1,0),
+                      gdiabetes=c(0,1,1,0),
+                      hypertension=c(1,0,1,0),
+                      eclampsia=c(0,0,0,1),
+                      pptb=c(0,0,0,1),
+                      infertility=c(1,0,0,0),
+                      idrugs=c(0,1,0,0),
+                      cesarean=c(0,0,1,0),
+                      gonorrhea=c(1,1,0,0),
+                      chlamydia=c(0,0,0,1),
+                      hepb=c(0,1,0,0),
+                      hepc=c(1,1,0,0),
+                      preterm=c(0,0,28,25),
+                      stillborn=c(0,1,0,0))
+preg_sim <- simulate_dataset(preg_df, n = 16000)
+
+
+```
+
+## Preprocessing Step
+
+1) Applying inclusion criteria, each obs must be complete.
+2) Mothers must be 18 or older, material morbidity excluded
+3) Gestational Age in alive babies less than 21 weeks excluded
+4) Multiple birth pregnancies excluded
+5) Pregnancies that ended in fetal death due to external causes excluded.
+
+```{r}
+preg_sim <- preg_sim %>% drop_na() %>% #1
+  filter(age > 18) %>% #2
+  filter(preterm > 21) #3
+#4 #5
+  
+
+```
