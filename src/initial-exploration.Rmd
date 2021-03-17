@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r cars}
 library(fakeR)
 library(tidyverse)
+library(recipes)
 ```
 
 ```{r pressure, echo=FALSE}
@@ -53,11 +54,44 @@ preg_sim <- simulate_dataset(preg_df, n = 16000)
 4) Multiple birth pregnancies excluded
 5) Pregnancies that ended in fetal death due to external causes excluded.
 
+6) Parity status of the mother was deducted from the number of prior births variable
+7) A new class variable was annotated to specify the outcome of pregnancies more accurately. 
+8) Fetal death cases were divided into late and early stillbirth based on their gestational age, at 28 weeks.
+9) Early stillbirth cases of less than 21 weeks were excluded because they are clinically defined as miscarriage cases. 
+10) Live births were divided into uncomplicated pregnancies, and PTB pregnancies at 37 weeks.
+11) We should get like 12,000,000 normal pregnancies, 1,000,000 PTB cases, 7924 early stillbirth cases and 8310 late stillbirth cases.
+
+12) Continuous Variable mean-zero normalization and unit-variance normalization. 
+13) Nominal predictors were one-hot encoded
+14) CDC data was partitioned into four sets; feature selection data, training data, validation data and test data along 10, 70, 10, 10 split.
+
+
+```{r}
+#functions
+normalize <- function(x){
+  return ((x-mean(x))/sd(x))
+}
+```
+
 ```{r}
 preg_sim <- preg_sim %>% drop_na() %>% #1
   filter(age > 18) %>% #2
-  filter(preterm > 21) #3
-#4 #5
+  filter(preterm > 21) %>% #3
+#4 #5 NOT DONE
+  mutate(BMI = normalize(BMI)) %>% #12
+  mutate(height = normalize(height)) %>%
+  mutate(weight = normalize(weight)) %>%
+  mutate(id = row_number()) %>% #adding an id
+  mutate(outcomes = ifelse(stillborn == 1,
+                           ifelse(preterm < 21, "miscarriage",
+                                  ifelse(preterm < 28, "early_stillbirth", "late_stillbirth")),
+                           ifelse(preterm < 37, "preterm", "normal"))) %>% #7-11
+  mutate(race = paste("race", race, sep = "_"), #13
+         race_hot = 1,
+         education = paste("education", education, sep = "_"),
+         education_hot = 1) %>%
+  spread(key = race, value = race_hot, fill = 0) %>%
+  spread(key = education, value = education_hot, fill = 0)
   
 
 ```
