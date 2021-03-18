@@ -1,10 +1,13 @@
 ---
 title: "fairchild_fake_data"
-output: html_document
+output:
+   pdf_document:
+     latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
 
 ## Let's make some fake data
@@ -14,39 +17,52 @@ library(caret)
 library(fakeR)
 library(tidyverse)
 library(recipes)
-set.seed(2021)
+```
+
+```{r}
+library(reticulate)
+use_virtualenv("./venv", required = TRUE)
 ```
 
 ```{r echo=FALSE}
-pregs_df <- data.frame(
-  age=c(20, 26, 21, 23), 
-  race=c("white", "black", "asian", "amerindian"), 
-  married=c(0, 1, 1, 0), 
-  education=c("High School", "College", "Doctorate", "8thGrade"), 
-  prev_term=c(1, 1, 2, 0), 
-  WIC=c(0, 1, 0, 1), 
-  smoking=c(0, 1, 7, 20), 
-  BMI=c(18.5, 21.2, 18.1, 27.8), 
-  height=c(62, 51, 72, 64), 
-  weight=c(150, 122, 143, 111), 
-  parity=c(1, 1, 1, 0), 
-  diabetes=c(1, 0, 1, 0), 
-  gdiabetes=c(0, 1, 1, 0), 
-  hypertension=c(1, 0, 1, 0), 
-  eclampsia=c(0, 0, 0, 1), 
-  pptb=c(0, 0, 0, 1), 
-  infertility=c(1, 0, 0, 0), 
-  idrugs=c(0, 1, 0, 0), 
-  cesarean=c(0, 0, 1, 0), 
-  gonorrhea=c(1, 1, 0, 0), 
-  chlamydia=c(0, 0, 0, 1), 
-  hepb=c(0, 1, 0, 0), 
-  hepc=c(1, 1, 0, 0), 
-  preterm=c(0, 26, 30, 40), 
-  stillborn=c(0, 1, 0, 0))
+set.seed(2021)
 
-# Use "pregs" for "pregs_sim" to be a bit less verbose
-pregs <- simulate_dataset(pregs_df, n = 16000)
+# "pregs" = "pregnancy simulations"
+pregs_df <- data.frame(
+  age = c(16, 21, 22, 30),
+  race = c("white", "black", "asian", "amerindian"),
+  married = c(0, 1, 1, 0),
+  education = c("HS", "College", "Doctorate", "8th"),
+  prev.terminations = c(1, 1, 2, 0),
+  WIC = c(0, 1, 0, 1),
+  smoking = c(0, 1, 7, 20),
+  BMI = c(18.5, 21.2, 18.1, 27.8),
+  height = c(62, 51, 72, 64),
+  weight = c(150, 122, 143, 111),
+  parity = c(1, 1, 1, 0),
+  diabetes = c(1, 0, 1, 0),
+  g.diabetes = c(0, 1, 1, 0),
+  prev.hyptertension = c(1, 0, 0, 0),
+  g.hypertension = c(1, 0, 1, 0),
+  eclampsia = c(0, 0, 0, 1),
+  prev.ptb = c(0, 0, 0, 1),
+  i.treatment = c(1, 0, 0, 0),
+  i.drugs = c(0, 1, 0, 0),
+  ART = c(0, 0, 1, 0),
+  prev.cesarean = c(0, 0, 1, 0),
+  gonorrhea = c(1, 1, 0, 0),
+  syphilis = c(0, 0, 1, 0),
+  chlamydia = c(0, 0, 0, 1),
+  hepb = c(0, 1, 0, 0),
+  hepc = c(1, 1, 0, 0),
+  g.weeks = c(18, 31, 32, 46),
+  stillborn = c(0, 1, 0, 0))
+
+# Just double up the initial data a bit. Without this, our preprocessing would
+# often end up excluding a whole race or education level.
+pregs_df <- pregs_df %>% rbind(pregs_df, pregs_df, pregs_df, pregs_df, pregs_df)
+
+pregs <- simulate_dataset(pregs_df, n = 16800)
 ```
 
 ## Preprocessing Step
@@ -62,8 +78,8 @@ pregs <- simulate_dataset(pregs_df, n = 16000)
 7) Parity status of the mother was deducted from the number of prior births variable
 8) A new class variable was annotated to specify the outcome of pregnancies more accurately. 
 9) Fetal death cases were divided into late and early stillbirth based on their gestational age, at 28 weeks.
-10) Early stillbirth cases of less than 21 weeks were excluded because they are clinically defined as miscarriage cases. 
-11) Live births were divided into uncomplicated pregnancies, and PTB pregnancies at 37 weeks.
+10) Early stillbirth cases of less than 21 weeks were excluded because they are clinically defined as miscarriage cases.
+11) Live births were divided into uncomplicated pregnancies, and PTB pregnancies ("pregnancies with delivery before 37 weeks of gestation").
 - We should get like 12,000,000 normal pregnancies, 1,000,000 PTB cases, 7924 early stillbirth cases and 8310 late stillbirth cases.
 
 12) Continuous Variable mean-zero normalization and unit-variance normalization. 
@@ -72,46 +88,52 @@ pregs <- simulate_dataset(pregs_df, n = 16000)
 
 ```{r}
 # functions
-normalize <- function(x){
+normalize <- function(x)  {
   return ((x - mean(x)) / sd(x))
 }
 ```
 
 ```{r}
 pregs_pp <- pregs %>%
-  mutate(id = row_number()) %>%  # adding an id
+  mutate(id = row_number()) %>%                     # adding an id
   relocate(id) %>%
+  filter(if_all(where(is.numeric), ~ . >= 0)) %>%   # filter negative numeric values created by synthetic data
   drop_na() %>%                                     # 1
   filter(age >= 18) %>%                             # 2
   # 3 NOT DONE
-  filter(!(stillborn == 0 & preterm < 21)) %>%      # 4
+  filter(g.weeks >= 21) %>%                         # 4 and 10
   #5 #6 #7 NOT DONE
   mutate(outcome = case_when(
-    stillborn == 0 & preterm >= 37 ~ "normal",
-    stillborn == 0 & preterm < 37  ~ "preterm",
-    stillborn == 1 & preterm < 28  ~ "early stillbearth",
-    stillborn == 1 & preterm < 21  ~ "miscarriage",
-    TRUE ~ NA_character_
-  )) %>%                                            # 8-11
-  filter(!is.na(outcome)) %>%  # some simulated datapoints are outside our stillborn/preterm bounds
+    stillborn == 0 & g.weeks < 37  ~ "preterm",
+    stillborn == 0 & g.weeks >= 37 ~ "normal",
+    stillborn == 1 & g.weeks < 28  ~ "early stillbearth",
+    stillborn == 1 & g.weeks >= 28 ~ "late stillbirth"
+  )) %>%                                            # 8, 9, 11
   mutate(BMI = normalize(BMI)) %>%
   mutate(height = normalize(height)) %>%
   mutate(weight = normalize(weight)) %>%            # 12
-  pivot_wider(names_from = race, names_prefix = "race_",
-              values_from = race, values_fill = 0, values_fn = is.character) %>%
-  pivot_wider(names_from = education, names_prefix = "education_",
-              values_from = education, values_fill = 0, values_fn = is.character) # 13
-  # 14 NOT DONE
+  mutate(race.f = factor(race)) %>%
+  mutate(education.f = factor(education)) %>%
+  mutate(race = paste("race", race, sep = "_"),
+         race_hot = 1,
+         education = paste("education", education, sep = "_"),
+         education_hot = 1) %>%
+  spread(key = race, value = race_hot, fill = 0) %>%
+  spread(key = education, value = education_hot, fill = 0) # 13 while preserving factors also
+
+any(is.na(pregs_pp))  # Should be False!
+table(pregs_pp$race.f)  # Make sure the simulated data is complete enough
+table(pregs_pp$education.f)
 ```
 
 ## Splitting data, and where to now?
 
-> R (v. 3.5.1) and Python (v. 3.6.9) were used as tools for statistical analysis and modelling. In addition to base packages, R package readr (v. 1.1.1) was used for reading the data set text files [32], while caret (v. 6.0-82) was used for data partition [17]. Several Python packages were used, scipy (v. 1.3.1) [10] and pandas (v. 0.25.0) for data management, and scikit-learn (v. 0.21.2) [24] for logistic regression. ... For ML modelling, tensorflow (v. 1.14.0) in conjunction with keras (v. 2.2.4) was used for neural networks [2, 5]. A gradient boosting decision tree was implemented using the lightgbm (v. 2.2.1) package [12].
+> ... caret (v. 6.0-82) was used for data partition [17].
 
 > For conducting the whole analysis, CDC data was partitioned into four sets; feature selection data, training data, validation data and test data. Feature selection data was used exclusively for feature variable analysis, training data for model training, validation data for regularization and early stopping while model training, and test data for final model evaluation along with the NYC data set. To sustain the class distribution of the outcome variable, class-stratified random splits of 10%, 70%, 10% and 10% were used, respectively.
 
 ```{r}
-# This honestly not an ideal way to do it. But it looks like the authors
+# This honestly is not an ideal way to do it. But it looks like the authors
 # used caret::createDataPartition to create their stratified samples to split
 # train/test/etc. So here goes.
 
@@ -131,15 +153,94 @@ pregs_test <- holdout[-idx_val, ]
 # Sanity checks
 # Should be .7, .1, .1, .1 splits
 sapply(list(pregs_train, pregs_feature, pregs_val, pregs_test), nrow)
+
 # Should be equal
 sum(sapply(list(pregs_train, pregs_feature, pregs_val, pregs_test), nrow))
 nrow(pregs_pp)
+
 # Both should be false
 any(duplicated(pregs_pp))
 any(duplicated(rbind(pregs_train, pregs_feature, pregs_val, pregs_test)))
+
+table(pregs_val$race.f)
+table(pregs_val$education.f)
 ```
 
-> Logistic regression (LR), gradient boosting decision tree (GBDT) and two artificial neural network (ANN) models were used in this study.
+## Feature analysis, feature dropping
+
+> For the task of predictor variable selection, correlation analysis and univariate analysis were used to determine the final set of variables. In correlation analysis, all possible predictor variable pairs were examined for linear dependency to each other with Pearson correlation coefficient. Because highly correlated predictor variables have the same effect on the dependent variable [8], one of the variables with correlation less than − 0.5 or more than 0.5 was excluded. This is based on the definition of moderate correlation [21]. This reduces redundancy of the data and produces more robust models.
+
+Let's work in Python to make the heatmap plot, since seaborn has a nice correlation matrix function, and it'll get us accustomed to working the R dataframe/tibbles and Python/Pandas dataframes.
+
+References:
+
+* Start here for working with Python in RStudio: https://rstudio.github.io/reticulate/
+* Correlation matrix on a Pandas dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.corr.html
+* Heatmap plot: https://seaborn.pydata.org/generated/seaborn.heatmap.html
+
+```{python}
+import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
+
+# Margins and fonts for our larg tick labels
+rcParams.update({'figure.autolayout': True})
+plt.gcf().tight_layout()
+sns.set(font_scale=0.7)
+
+# Drop outcome columns and the columns we converted to one-hot.
+features = r.pregs_feature.drop(columns=['id', 'stillborn', 'g.weeks', 'outcome', 'race.f', 'education.f'])
+# Note that the original authors did their correlation plot without one-hots;
+# i.e. they treated education and race as factors. It seems extremely tenuous
+# to do that with race, and to a lesser degree education, since race definitely
+# isn't ordinal (perhaps education is). In any case, here's our analysis with
+# respect to the one-hots, which may be more revealing.
+
+# Pandas built-in function for Rearson correlation
+correlations = features.corr()
+print(correlations.isna().any())
+
+# Plot
+sns.heatmap(correlations)
+plt.show()
+plt.close()
+```
+
+Back to R, we can get the correlation matrix from `py` and filter to see the feature combinations that are highly correlated.
+
+```{r}
+corrs <- as.data.frame(py$correlations)
+corrs_flat <- lapply(rownames(corrs), function(s) {
+  ret <- corrs[s, ] %>%
+    select(-c(s)) %>%
+    unlist()
+  names(ret) <- paste(s, "x", names(ret))
+  return(ret)
+})
+corrs_flat <- unlist(corrs_flat)
+significants <- corrs_flat[corrs_flat > .5 | corrs_flat < -.5]
+sort(significants)
+```
+
+Super wonky right now, but that seems to be just due to our synthetic data.
+
+> The correlation results in Fig. 1 show that mothers BMI (f8) and weight (f10) in pounds were highly correlated (0.94), which makes sense because in the BMI formula BMI=weight(Lb)height(in.)2*703, (3) weight is the numerator. Because of this, weight was chosen to be excluded. Infertility drugs and assisted reproductive technology (ART) use were correlated to infertility treatment (0.68 and 0.67). This is also to be expected, because they are alternative forms of infertility treatment. Figure 2 shows that observations marked for infertility drugs and ART are always a member of the set of infertility treatment. The presence of 10,660 observations (0.08% of all study data) where treatment is marked but drugs or ART use are not suggests either the use of other undocumented infertility treatment procedures such as myomectomy surgeries [18], incomplete documentation in some data collection areas, poor data quality or a combination of the three. Because the data is de-identified, we can only speculate the underlying effect, so the three infertility-related variables were included in the set of features. No other significant correlations were found, i.e. less than − 0.5 or more than 0.5.
+
+So let's exclude weight.
+
+```{r}
+pregs_train_select <- pregs_train %>% select(-weight)
+pregs_val_select <- pregs_val %>% select(-weight)
+pregs_test_select <- pregs_test %>% select(-weight)
+```
+
+## Model details
+
+Putting this here for reference!
+
+> R (v. 3.5.1) and Python (v. 3.6.9) were used as tools for statistical analysis and modelling. In addition to base packages, R package readr (v. 1.1.1) was used for reading the data set text files [32] ... . Several Python packages were used, scipy (v. 1.3.1) [10] and pandas (v. 0.25.0) for data management, and scikit-learn (v. 0.21.2) [24] for logistic regression. ... For ML modelling, tensorflow (v. 1.14.0) in conjunction with keras (v. 2.2.4) was used for neural networks [2, 5]. A gradient boosting decision tree was implemented using the lightgbm (v. 2.2.1) package [12].
+
+> Logistic regression (LR),gradient boosting decision tree (GBDT) and two artificial neural network (ANN) models were used in this study.
 
 Logistic regression:
 
@@ -158,7 +259,17 @@ Neural nets number two:
 > The second was a deep feed-forward self-normalizing neural network based on the scaled exponential linear units (SELU) activation function, which has been demonstrated to achieve superior performance to other feed-forward neural networks. ... four hidden layers were selected for the SELU network instead of two that was used in our previously published ANN. The number of hidden nodes per layer was set to the number of input variables; all of them contained the SELU activation function. Alpha node dropout amount in these nodes was set to 15%. LeCun normal weight initialization was used. Adam gradient descent optimization with 0.001 learning rate was used for updating weights. Sigmoid activation function was utilized as the final node for binary classification. 10 epochs with a batch size of 256 was tested to be optimal.
 
 Other important notes:
+
  * "For all the case classes of late stillbirth, early stillbirth and PTB, binary classifiers of normal pregnancy vs. case were constructed." I.e. for each method they trained FOUR binary classifiers instead of multiclass classifiers.
  * "Because of the class unbalance, class weights w were calculated from the training data set with w=s/(c * f(y)) where s is number of samples, c is the number of different classes and f(y) is the frequency of classes in data labels y."
 * "Folded cross validation was determined to not be necessary with the data of this size."
 * The authors also built average- and weighted-average ensemble models. "All possible [weighted average] weight combinations were calculated with exhaustive grid search when the objective function was maximizing prediction AUC, with the constraint that the result vector of non-negative values add up to one, i.e. 100%."
+
+## Save the feature-selected data
+
+```{r}
+# Note - ensure the working directory is top-level (fair-child), not "src"
+write.csv(pregs_train_select, "data/sim/pregsim_train.csv", row.names = FALSE)
+write.csv(pregs_val_select, "data/sim/pregsim_val.csv", row.names = FALSE)
+write.csv(pregs_test_select, "data/sim/pregsim_test.csv", row.names = FALSE)
+```
