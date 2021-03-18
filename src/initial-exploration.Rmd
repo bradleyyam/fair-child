@@ -10,13 +10,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Let's make some fake data
 
 ```{r}
+library(caret)
 library(fakeR)
 library(tidyverse)
 library(recipes)
+set.seed(2021)
 ```
 
 ```{r echo=FALSE}
-preg_df <- data.frame(
+pregs_df <- data.frame(
   age=c(20, 26, 21, 23), 
   race=c("white", "black", "asian", "amerindian"), 
   married=c(0, 1, 1, 0), 
@@ -43,7 +45,8 @@ preg_df <- data.frame(
   preterm=c(0, 26, 30, 40), 
   stillborn=c(0, 1, 0, 0))
 
-preg_sim <- simulate_dataset(preg_df, n = 16000)
+# Use "pregs" for "pregs_sim" to be a bit less verbose
+pregs <- simulate_dataset(pregs_df, n = 16000)
 ```
 
 ## Preprocessing Step
@@ -75,7 +78,7 @@ normalize <- function(x){
 ```
 
 ```{r}
-preg_sim_preprocess <- preg_sim %>%
+pregs_pp <- pregs %>%
   mutate(id = row_number()) %>%  # adding an id
   relocate(id) %>%
   drop_na() %>%                                     # 1
@@ -97,6 +100,65 @@ preg_sim_preprocess <- preg_sim %>%
   pivot_wider(names_from = race, names_prefix = "race_",
               values_from = race, values_fill = 0, values_fn = is.character) %>%
   pivot_wider(names_from = education, names_prefix = "education_",
-              values_from = education, values_fill = 0, values_fn = is.character)  # 13
+              values_from = education, values_fill = 0, values_fn = is.character) # 13
   # 14 NOT DONE
 ```
+
+## Splitting data, and where to now?
+
+> R (v. 3.5.1) and Python (v. 3.6.9) were used as tools for statistical analysis and modelling. In addition to base packages, R package readr (v. 1.1.1) was used for reading the data set text files [32], while caret (v. 6.0-82) was used for data partition [17]. Several Python packages were used, scipy (v. 1.3.1) [10] and pandas (v. 0.25.0) for data management, and scikit-learn (v. 0.21.2) [24] for logistic regression. ... For ML modelling, tensorflow (v. 1.14.0) in conjunction with keras (v. 2.2.4) was used for neural networks [2, 5]. A gradient boosting decision tree was implemented using the lightgbm (v. 2.2.1) package [12].
+
+> For conducting the whole analysis, CDC data was partitioned into four sets; feature selection data, training data, validation data and test data. Feature selection data was used exclusively for feature variable analysis, training data for model training, validation data for regularization and early stopping while model training, and test data for final model evaluation along with the NYC data set. To sustain the class distribution of the outcome variable, class-stratified random splits of 10%, 70%, 10% and 10% were used, respectively.
+
+```{r}
+# This honestly not an ideal way to do it. But it looks like the authors
+# used caret::createDataPartition to create their stratified samples to split
+# train/test/etc. So here goes.
+
+idx_train <- pregs_pp$outcome %>% createDataPartition(p = 0.7, list = FALSE)
+pregs_train <- pregs_pp[idx_train, ]
+
+holdout <- pregs_pp[-idx_train, ]
+idx_feature <- holdout$outcome %>% createDataPartition(p = 1/3, list = FALSE)
+pregs_feature <- holdout[idx_feature, ]
+
+holdout <- holdout[-idx_feature, ]
+idx_val <- holdout$outcome %>% createDataPartition(p = 1/2, list = FALSE)
+pregs_val <- holdout[idx_val, ]
+
+pregs_test <- holdout[-idx_val, ]
+
+# Sanity checks
+# Should be .7, .1, .1, .1 splits
+sapply(list(pregs_train, pregs_feature, pregs_val, pregs_test), nrow)
+# Should be equal
+sum(sapply(list(pregs_train, pregs_feature, pregs_val, pregs_test), nrow))
+nrow(pregs_pp)
+# Both should be false
+any(duplicated(pregs_pp))
+any(duplicated(rbind(pregs_train, pregs_feature, pregs_val, pregs_test)))
+```
+
+> Logistic regression (LR), gradient boosting decision tree (GBDT) and two artificial neural network (ANN) models were used in this study.
+
+Logistic regression:
+
+> LR will serve as a baseline for the more complex algorithms due to its simplicity and robustness. L2-regularizied logistic regression with limited-memory Broyden–Fletcher–Goldfarb–Shanno (BFGS) parameter optimization was used. Tolerance for stopping criteria was set to 1.0e−4. Regularization strength C was set to 1.0. The optimal maximum number of iterations was found to be 100.
+
+Gradient boosting tree:
+
+> The lightgbm (LGBM) version of GBDT algorithm was chosen for our study. ... For modelling, after iterative experimentation the number of leaves was set to 48, minimal number of data observations in one leaf to 500, maximum depth of the tree model was not restricted, shrinkage rate was set to 0.001, feature and bagging fractions were set to 1 and boosting algorithm was chosen to be Gradient Boosting Decision Tree. Maximum iterations was set to 2000, and early stopping after 500 iterations was used and the used metric for performance was AUC. Different outcomes have clinically significant false positive rates based on incidence. True positive rates in those false positive rates could also be used as a metric for performance, however initial experimentation showed that there were no significant changes in using them over AUC.
+
+Neural nets number one:
+
+> For ANN, the first model was a Leaky ReLU-based deep two-layer feed-forward neural network that we have previously shown to perform well in the risk prediction task of Down’s syndrome [15].
+
+Neural nets number two:
+
+> The second was a deep feed-forward self-normalizing neural network based on the scaled exponential linear units (SELU) activation function, which has been demonstrated to achieve superior performance to other feed-forward neural networks. ... four hidden layers were selected for the SELU network instead of two that was used in our previously published ANN. The number of hidden nodes per layer was set to the number of input variables; all of them contained the SELU activation function. Alpha node dropout amount in these nodes was set to 15%. LeCun normal weight initialization was used. Adam gradient descent optimization with 0.001 learning rate was used for updating weights. Sigmoid activation function was utilized as the final node for binary classification. 10 epochs with a batch size of 256 was tested to be optimal.
+
+Other important notes:
+ * "For all the case classes of late stillbirth, early stillbirth and PTB, binary classifiers of normal pregnancy vs. case were constructed." I.e. for each method they trained FOUR binary classifiers instead of multiclass classifiers.
+ * "Because of the class unbalance, class weights w were calculated from the training data set with w=s/(c * f(y)) where s is number of samples, c is the number of different classes and f(y) is the frequency of classes in data labels y."
+* "Folded cross validation was determined to not be necessary with the data of this size."
+* The authors also built average- and weighted-average ensemble models. "All possible [weighted average] weight combinations were calculated with exhaustive grid search when the objective function was maximizing prediction AUC, with the constraint that the result vector of non-negative values add up to one, i.e. 100%."
