@@ -9,89 +9,94 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Let's make some fake data
 
-```{r cars}
+```{r}
 library(fakeR)
 library(tidyverse)
 library(recipes)
 ```
 
-```{r pressure, echo=FALSE}
-preg_df <- data.frame(age=c(15,26,21,23),
-                      race=c("white", "black", "asian", "amerindian"),
-                      married=c(0,1,1,0),
-                      education=c("High School", "College","Doctorate","8thGrade"),
-                      prev_term=c(1,1,2,0),
-                      WIC=c(0,1,0,1),
-                      smoking=c(0,1,7,20),
-                      BMI=c(18.5,21.2,18.1,27.8),
-                      height=c(62,51,72,64),
-                      weight=c(150,122,143,111),
-                      parity=c(1,1,1,0),
-                      diabetes=c(1,0,1,0),
-                      gdiabetes=c(0,1,1,0),
-                      hypertension=c(1,0,1,0),
-                      eclampsia=c(0,0,0,1),
-                      pptb=c(0,0,0,1),
-                      infertility=c(1,0,0,0),
-                      idrugs=c(0,1,0,0),
-                      cesarean=c(0,0,1,0),
-                      gonorrhea=c(1,1,0,0),
-                      chlamydia=c(0,0,0,1),
-                      hepb=c(0,1,0,0),
-                      hepc=c(1,1,0,0),
-                      preterm=c(0,0,28,25),
-                      stillborn=c(0,1,0,0))
+```{r echo=FALSE}
+preg_df <- data.frame(
+  age=c(20, 26, 21, 23), 
+  race=c("white", "black", "asian", "amerindian"), 
+  married=c(0, 1, 1, 0), 
+  education=c("High School", "College", "Doctorate", "8thGrade"), 
+  prev_term=c(1, 1, 2, 0), 
+  WIC=c(0, 1, 0, 1), 
+  smoking=c(0, 1, 7, 20), 
+  BMI=c(18.5, 21.2, 18.1, 27.8), 
+  height=c(62, 51, 72, 64), 
+  weight=c(150, 122, 143, 111), 
+  parity=c(1, 1, 1, 0), 
+  diabetes=c(1, 0, 1, 0), 
+  gdiabetes=c(0, 1, 1, 0), 
+  hypertension=c(1, 0, 1, 0), 
+  eclampsia=c(0, 0, 0, 1), 
+  pptb=c(0, 0, 0, 1), 
+  infertility=c(1, 0, 0, 0), 
+  idrugs=c(0, 1, 0, 0), 
+  cesarean=c(0, 0, 1, 0), 
+  gonorrhea=c(1, 1, 0, 0), 
+  chlamydia=c(0, 0, 0, 1), 
+  hepb=c(0, 1, 0, 0), 
+  hepc=c(1, 1, 0, 0), 
+  preterm=c(0, 26, 30, 40), 
+  stillborn=c(0, 1, 0, 0))
+
 preg_sim <- simulate_dataset(preg_df, n = 16000)
-
-
 ```
 
 ## Preprocessing Step
 
 1) Applying inclusion criteria, each obs must be complete.
-2) Mothers must be 18 or older, material morbidity excluded
-3) Gestational Age in alive babies less than 21 weeks excluded
-4) Multiple birth pregnancies excluded
-5) Pregnancies that ended in fetal death due to external causes excluded.
+- Fairness question here: what is lost by dropping all rows with an NA?
+2) Mothers must be 18 or older
+3) Maternal morbidity excluded
+4) Alive babies with gestational age less than 21 weeks excluded
+5) Multiple birth pregnancies excluded
+6) Pregnancies that ended in fetal death due to external causes excluded.
 
-6) Parity status of the mother was deducted from the number of prior births variable
-7) A new class variable was annotated to specify the outcome of pregnancies more accurately. 
-8) Fetal death cases were divided into late and early stillbirth based on their gestational age, at 28 weeks.
-9) Early stillbirth cases of less than 21 weeks were excluded because they are clinically defined as miscarriage cases. 
-10) Live births were divided into uncomplicated pregnancies, and PTB pregnancies at 37 weeks.
-11) We should get like 12,000,000 normal pregnancies, 1,000,000 PTB cases, 7924 early stillbirth cases and 8310 late stillbirth cases.
+7) Parity status of the mother was deducted from the number of prior births variable
+8) A new class variable was annotated to specify the outcome of pregnancies more accurately. 
+9) Fetal death cases were divided into late and early stillbirth based on their gestational age, at 28 weeks.
+10) Early stillbirth cases of less than 21 weeks were excluded because they are clinically defined as miscarriage cases. 
+11) Live births were divided into uncomplicated pregnancies, and PTB pregnancies at 37 weeks.
+- We should get like 12,000,000 normal pregnancies, 1,000,000 PTB cases, 7924 early stillbirth cases and 8310 late stillbirth cases.
 
 12) Continuous Variable mean-zero normalization and unit-variance normalization. 
 13) Nominal predictors were one-hot encoded
 14) CDC data was partitioned into four sets; feature selection data, training data, validation data and test data along 10, 70, 10, 10 split.
 
-
 ```{r}
-#functions
+# functions
 normalize <- function(x){
-  return ((x-mean(x))/sd(x))
+  return ((x - mean(x)) / sd(x))
 }
 ```
 
 ```{r}
-preg_sim <- preg_sim %>% drop_na() %>% #1
-  filter(age > 18) %>% #2
-  filter(preterm > 21) %>% #3
-#4 #5 NOT DONE
-  mutate(BMI = normalize(BMI)) %>% #12
+preg_sim_preprocess <- preg_sim %>%
+  mutate(id = row_number()) %>%  # adding an id
+  relocate(id) %>%
+  drop_na() %>%                                     # 1
+  filter(age >= 18) %>%                             # 2
+  # 3 NOT DONE
+  filter(!(stillborn == 0 & preterm < 21)) %>%      # 4
+  #5 #6 #7 NOT DONE
+  mutate(outcome = case_when(
+    stillborn == 0 & preterm >= 37 ~ "normal",
+    stillborn == 0 & preterm < 37  ~ "preterm",
+    stillborn == 1 & preterm < 28  ~ "early stillbearth",
+    stillborn == 1 & preterm < 21  ~ "miscarriage",
+    TRUE ~ NA_character_
+  )) %>%                                            # 8-11
+  filter(!is.na(outcome)) %>%  # some simulated datapoints are outside our stillborn/preterm bounds
+  mutate(BMI = normalize(BMI)) %>%
   mutate(height = normalize(height)) %>%
-  mutate(weight = normalize(weight)) %>%
-  mutate(id = row_number()) %>% #adding an id
-  mutate(outcomes = ifelse(stillborn == 1,
-                           ifelse(preterm < 21, "miscarriage",
-                                  ifelse(preterm < 28, "early_stillbirth", "late_stillbirth")),
-                           ifelse(preterm < 37, "preterm", "normal"))) %>% #7-11
-  mutate(race = paste("race", race, sep = "_"), #13
-         race_hot = 1,
-         education = paste("education", education, sep = "_"),
-         education_hot = 1) %>%
-  spread(key = race, value = race_hot, fill = 0) %>%
-  spread(key = education, value = education_hot, fill = 0)
-  
-
+  mutate(weight = normalize(weight)) %>%            # 12
+  pivot_wider(names_from = race, names_prefix = "race_",
+              values_from = race, values_fill = 0, values_fn = is.character) %>%
+  pivot_wider(names_from = education, names_prefix = "education_",
+              values_from = education, values_fill = 0, values_fn = is.character)  # 13
+  # 14 NOT DONE
 ```
