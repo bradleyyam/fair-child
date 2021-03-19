@@ -16,15 +16,12 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 library(caret)
 library(fakeR)
 library(tidyverse)
-library(recipes)
-```
 
-```{r}
 library(reticulate)
 use_virtualenv("./venv", required = TRUE)
 ```
 
-```{r echo=FALSE}
+```{r}
 set.seed(2021)
 
 # "pregs" = "pregnancy simulations"
@@ -212,7 +209,7 @@ Back to R, we can get the correlation matrix from `py` and filter to see the fea
 corrs <- as.data.frame(py$correlations)
 corrs_flat <- lapply(rownames(corrs), function(s) {
   ret <- corrs[s, ] %>%
-    select(-c(s)) %>%
+    select(-all_of(s)) %>%
     unlist()
   names(ret) <- paste(s, "x", names(ret))
   return(ret)
@@ -269,7 +266,7 @@ Other important notes:
 
 ```{r}
 # Note - ensure the working directory is top-level (fair-child), not "src"
-write.csv(pregs_train_select, "data/sim/pregsim_train.csv", row.names = FALSE)
-write.csv(pregs_val_select, "data/sim/pregsim_val.csv", row.names = FALSE)
-write.csv(pregs_test_select, "data/sim/pregsim_test.csv", row.names = FALSE)
+write.csv(pregs_train_select, "data/sim/train.csv", row.names = FALSE)
+write.csv(pregs_val_select, "data/sim/val.csv", row.names = FALSE)
+write.csv(pregs_test_select, "data/sim/test.csv", row.names = FALSE)
 ```
