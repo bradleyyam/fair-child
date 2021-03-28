@@ -1,12 +1,21 @@
+# Data ignores
 *.csv
+data/cdc/*.txt
+data/cdc/*.zip
+data/cdc/*.csv
+
+# R ignores
 *.Rproj*
 .Rhistory
 .RData
 .Ruserdata
 .Rproj.user
+
+# Python ignores
 venv/
 .ipynb_checkpoints/
-data/cdc/*.txt
-data/cdc/*.zip
-data/cdc/*.csv
+__pycache__/
+
+# Misc
 *.DS_Store
+.vscode/

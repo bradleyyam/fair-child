@@ -38,3 +38,9 @@ def preg_outcome_to_onehot(y):
     oh = y.str.get_dummies()
     print("Protype one-hot vector for outcome:", oh.columns.values.tolist())
     return oh.values
+
+# Example calls to load data:
+# xtrain, ytrain, xtest, ytest, xval, yval = util.load_preg_data(sim=True, onehots=True)
+# ytrain_early, ytrain_late, ytrain_preterm = util.preg_outcome_to_binaries(ytrain)
+# ytest_early, ytest_late, ytest_preterm = util.preg_outcome_to_binaries(ytest)
+# yval_early, yval_late, yval_preterm = util.preg_outcome_to_binaries(yval)
