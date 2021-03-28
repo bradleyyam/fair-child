@@ -468,7 +468,7 @@ natl2014 <- fread("../data/cdc/natl2014.csv")
 natl2014_clean <- natl2014 %>% 
   mutate(Stillborn = 0) %>%
   mutate(revision = 0) %>%
-  select(revision, dob_yy, mager, mracerec, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  select(revision, dob_yy, mager, mbrace, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
   set_colnames(renamed_columns)
 
 
