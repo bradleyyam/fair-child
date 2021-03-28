@@ -262,6 +262,7 @@ codebook_base2013 <- tribble(
   10, "F",
   1, "Sex",
   1, "Sex Imputed",
+  2, "F",
   2, "Last Normal Menses Month",
   4, "Last Normal Menses Year",
   2, "Obstetric Gestation",
@@ -350,14 +351,14 @@ end_flags <-
 Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/fetaldeath/2013FetalUserGuide.pdf
 
 ```{r}
-# fd_2013 <- read.fwf(
-#   "data/cdc/VS13FetalDetailPubUS.txt",
-#   widths = codebook_base$width,
-#   col.names = codebook_base$name,
-#   header = FALSE,
-#   stringsAsFactors = FALSE,
-#   n = 100
-# )
+fd_2013 <- read.fwf(
+   "../data/cdc/VS13FetalDetailPubUS.txt",
+   widths = codebook_base2013$width,
+   col.names = codebook_base2013$name,
+   header = FALSE,
+   stringsAsFactors = FALSE,
+   n = 100
+ )
 ```
 
 ### 2014
