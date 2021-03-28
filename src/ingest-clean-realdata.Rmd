@@ -8,6 +8,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
+library(data.table)
+library(magrittr)
 ```
 
 To-do list, CDC data:
@@ -413,3 +415,61 @@ fd_2016 <- read.fwf(
 This is also really CDC data from the same source, but already parsed into a much-nicer csv file by the Natl Bureau of Economic Research: https://www.nber.org/research/data/vital-statistics-natality-birth-data
 
 ## 
+
+```{r}
+
+renamed_columns <- c(
+  "Version",
+  "DeliveryYear",
+  "Age",
+  "Race",
+  "Education",
+  "PrevTerminations",
+  "WIC",
+  "PrepregnancySmoking",
+  "BMI",
+  "Height",
+  "Weight",
+  "Parity",
+  "PrepregnancyDiabetes",
+  "GestationalDiabetes",
+ "PrepregnancyHypertension",
+  "GestationalHypertension",
+  "HypertensionEclampsia",
+  "PrevPretermBirths",
+  "InfertilityTreatment",
+  "InfertilityDrugs",
+  "ART",
+  "PrevCesareans",
+  "Gonorrhea",
+  "Syphilis",
+  "Chlamydia",
+  "HepatitisB",
+  "HepatitisC",
+  "Stillborn",
+  "Preterm"
+)
+
+
+natl2013 <- fread("../data/cdc/natl2013.csv") 
+
+
+natl2013_clean <- natl2013 %>% 
+  mutate(Stillborn = 0) %>% 
+  select(revision, dob_yy, mager, mracerec, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  set_colnames(renamed_columns)
+
+fwrite(natl2013_clean, "../data/clean/natl2013_clean.csv")
+
+remove(list = ls()) #so that you don't saturate your RAM
+
+natl2014 <- fread("../data/cdc/natl2014.csv") 
+
+natl2014_clean <- natl2014 %>% 
+  mutate(Stillborn = 0) %>%
+  mutate(revision = 0) %>%
+  select(revision, dob_yy, mager, mracerec, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  set_colnames(renamed_columns)
+
+
+```
