@@ -5,4 +5,5 @@
 .Rproj.user
 venv/
 .ipynb_checkpoints/
-"data/cdc/fatality_2015.txt" 
+data/cdc/*.txt
+data/cdc/*.zip

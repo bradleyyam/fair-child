@@ -1,8 +1,5 @@
 ---
 title: "ingest_clean"
-author: "bradley"
-date: "3/23/2021"
-output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -13,9 +10,43 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
+To-do list, CDC data:
+
+* Copy the variable names and column widths for (?) 2013, 2014, 2016 into variables here; import all CDC data.
+* Select variables of interest
+* For each variable, decode CDC's shorthand into the data format and datatypes we desire
+* Also decode "flags" as needed
+* Join all years
+
+To-do list, NBER data:
+
+* Read.csv?
+* Select features of interest
+* Decode any shorthand(?) as needed
+* Join all years
+
+To-do list, all:
+
+* Standardized our feature/variable names, and MERGE them all
+* (Not crucial) feature and correlation analysis on the final dataset
+
+# Ingesting data from the CDC and NBER
+
+## CDC Data
+
+All CDC data was retrieved through their Vital Statistics online portal: https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm#Fetal_Death. 
+
+### 2013
+
+### 2014
+
+### 2015
+
+Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/fetaldeath/2015FetalUserGuide.pdf
+
 ```{r}
-colsandwidths <- tribble(
-  ~width, ~colname,
+codebook_2015 <- tribble(
+  ~width, ~name,
   6, "F",
   1, "Version",
   2, "F",
@@ -161,16 +192,13 @@ colsandwidths <- tribble(
   6, "Flags6",
   2610, "F"
 )
-```
 
-
-```{r}
-y <- read.fwf("data/cdc/Fetal2015US.txt", 
-              widths = colsandwidths$width,
-              col.names = colsandwidths$colname,
-              header = FALSE,
-              n = 100,
-              stringsAsFactors = FALSE
+fd_2015 <- read.fwf(
+  "data/cdc/Fetal2015US.txt", 
+  widths = codebook_2015$width,
+  col.names = codebook_2015$name,
+  header = FALSE,
+  stringsAsFactors = FALSE
 )
 ```
 
@@ -230,3 +258,10 @@ end_flags <-
     "num of prev births flag")
 ```
 
+### 2016
+
+## NBER Data
+
+This is also really CDC data from the same source, but already parsed into a much-nicer csv file by the Natl Bureau of Economic Research: https://www.nber.org/research/data/vital-statistics-natality-birth-data
+
+## 

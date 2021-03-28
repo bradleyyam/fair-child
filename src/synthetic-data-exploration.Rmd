@@ -1,8 +1,5 @@
 ---
 title: "fairchild_fake_data"
-output:
-   pdf_document:
-     latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
