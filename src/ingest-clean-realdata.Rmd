@@ -36,16 +36,10 @@ To-do list, all:
 
 All CDC data was retrieved through their Vital Statistics online portal: https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm#Fetal_Death. 
 
-### 2013
-
-### 2014
-
-### 2015
-
-Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/fetaldeath/2015FetalUserGuide.pdf
+Thank goodness
 
 ```{r}
-codebook_2015 <- tribble(
+codebook_base <- tribble(
   ~width, ~name,
   6, "F",
   1, "Version",
@@ -67,7 +61,7 @@ codebook_2015 <- tribble(
   31, "F",
   1, "Mother Age Imputed",
   1, "Reported Age of Mother Flag",
-  2, "Mother Single Year of age",
+  2, "Mother Single Year of Age",
   2, "Mother Age Recode 14",
   1, "Mother Age Recode 9",
   2, "Mother Birth Country",
@@ -138,7 +132,7 @@ codebook_2015 <- tribble(
   1, "Fetal Presentation",
   1, "Route and Method of Delivery",
   1, "Trial of Labour Attempted",
-  1, "Delviery Method Recode (revised)",
+  1, "Delivery Method Recode (Revised)",
   1, "Forceps",
   1, "Vacuum",
   1, "Delivery Method Recode",
@@ -193,16 +187,7 @@ codebook_2015 <- tribble(
   2610, "F"
 )
 
-fd_2015 <- read.fwf(
-  "data/cdc/Fetal2015US.txt", 
-  widths = codebook_2015$width,
-  col.names = codebook_2015$name,
-  header = FALSE,
-  stringsAsFactors = FALSE
-)
-```
-
-```{r}
+# not used right now
 end_flags <-
   c("Education of Mother",
     "Obstetric Estimate of Gestation",
@@ -258,7 +243,68 @@ end_flags <-
     "num of prev births flag")
 ```
 
+
+### 2013
+
+Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/fetaldeath/2013FetalUserGuide.pdf
+
+```{r}
+# fd_2013 <- read.fwf(
+#   "data/cdc/VS13FetalDetailPubUS.txt",
+#   widths = codebook_base$width,
+#   col.names = codebook_base$name,
+#   header = FALSE,
+#   stringsAsFactors = FALSE,
+#   n = 100
+# )
+```
+
+### 2014
+
+Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/fetaldeath/2014FetalUserGuide.pdf
+
+```{r}
+fd_2014 <- read.fwf(
+  "data/cdc/VS14FetalPubUS_NEW.txt",
+  widths = codebook_base$width,
+  col.names = codebook_base$name,
+  header = FALSE,
+  stringsAsFactors = FALSE,
+  n = 100
+)
+```
+
+
+### 2015
+
+Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/fetaldeath/2015FetalUserGuide.pdf
+
+```{r}
+fd_2015 <- read.fwf(
+  "data/cdc/Fetal2015US.txt", 
+  widths = codebook_base$width,
+  col.names = codebook_base$name,
+  header = FALSE,
+  stringsAsFactors = FALSE,
+  n = 100
+)
+```
+
 ### 2016
+
+Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/fetaldeath/2016FetalUserGuide.pdf
+
+```{r}
+fd_2016 <- read.fwf(
+  "data/cdc/2016_FET_Analysis_Public_US_20190409.txt", 
+  widths = codebook_base$width,
+  col.names = codebook_base$name,
+  header = FALSE,
+  stringsAsFactors = FALSE,
+  n = 100
+)
+```
+
 
 ## NBER Data
 
