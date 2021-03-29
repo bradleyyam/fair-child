@@ -345,6 +345,56 @@ end_flags <-
     "histological placement flag",
     "mothers bridged race recode flag",
     "num of prev births flag")
+
+fd_selected_columns <- c(
+  "Version",
+  "Delivery.Year",
+  "Mother.Single.Year.of.Age",
+  "Mother.Bridged.Race.Recode",
+  "Mother.Education.Revised",
+  "Prior.Births.Now.Dead",
+  "WIC",
+  "Cigarettes.Before.Pregnancy",
+  "BMI",
+  "Mother.Height..in.",
+  "Prepregnancy.Weight.Recode",
+  "Live.Birth.Order.Recode",
+  "Prepregnancy.Diabetes",
+  "Gestational.Diabetes",
+  "Prepregnancy.Hpertension",
+  "Gestational.Hypertension",
+  "Hypertension.Eclampsia",
+  "Infertility.Treatment",
+  "Fertility.Enhancing.Drugs",
+  "Asst.Reproductive.Technology",
+  "Previous.Cesareans"
+)
+
+fd_renamed_columns <- c(
+  "Version",
+  "DeliveryYear",
+  "Age",
+  "Race",
+  "Education",
+  "PrevTerminations",
+  "WIC",
+  "PrepregnancySmoking",
+  "BMI",
+  "Height",
+  "Weight",
+  "Parity",
+  "PrepregnancyDiabetes",
+  "GestationalDiabetes",
+  "PrepregnancyHypertension",
+  "GestationalHypertension",
+  "HypertensionEclampsia",
+  "InfertilityTreatment",
+  "InfertilityDrugs",
+  "ART",
+  "PrevCesareans",
+  "Stillborn",
+  "Preterm"
+)
 ```
 
 
@@ -358,9 +408,53 @@ fd_2013 <- read.fwf(
    widths = codebook_base2013$width,
    col.names = codebook_base2013$name,
    header = FALSE,
-   stringsAsFactors = FALSE,
-   n = 100
- )
+   stringsAsFactors = FALSE
+)
+
+fd_selected_columns_2013 <- c(
+  "Version",
+  "Delivery.Year",
+  "Mother.Single.Year.of.Age",
+  "Mother.Race.Recode",
+  # education,
+  "Total.Birth.Order.Recode",
+  #WIC,
+  #smoking,
+  #BMI,
+  #Height,
+  #Weight,
+  "Live.Birth.Order.Recode",
+  "Diabetes",
+  #GestationalDiabetes,
+  "Prepregnancy.Hpertension",
+  #GestationalHypertension,
+  "Eclampsia"
+  #InfertilityTreatment,
+  #InfertilityDrugs,
+  #ART,
+  #PrevCesareans
+)
+
+fd_2013_clean <- fd_2013[fd_selected_columns_2013] %>%
+  mutate(Total.Birth.Order.Recode = Total.Birth.Order.Recode
+         - Live.Birth.Order.Recode) %>%
+  mutate(Diabetes=recode(Diabetes, `1`="Y", `2`="N", `8`="U", `9`="U")) %>%
+  mutate(Prepregnancy.Hpertension=recode(Prepregnancy.Hpertension, `1`="Y", `2`="N", 
+                                         `8`="U", `9`="U")) %>%
+  mutate(Eclampsia=recode(Eclampsia, `1`="Y", `2`="N", `8`="U", `9`="U")) %>%
+  mutate(Education = NA, .after = Mother.Race.Recode) %>%
+  mutate(WIC = NA, Smoking = NA, BMI = NA, Height = NA, 
+             Weight = NA, .after = Total.Birth.Order.Recode) %>%
+  mutate(GestationalDiabetes = NA, .after = Diabetes) %>%
+  mutate(GestationalHypertension = NA, .after = Prepregnancy.Hpertension) %>%
+  mutate(InfertilityTreatment = NA, InfertilityDrugs = NA, ART= NA, 
+             PrevCesareans = NA, Stillborn = 1, "Preterm" = 0, .after = 
+               "Eclampsia") %>%
+  set_colnames(fd_renamed_columns)
+
+fwrite(fd_2013_clean, "../data/clean/fd_2013_clean.csv")
+
+remove(fd_2013, fd_2013_clean)
 ```
 
 ### 2014
@@ -369,13 +463,21 @@ Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Docu
 
 ```{r}
 fd_2014 <- read.fwf(
-  "data/cdc/VS14FetalPubUS_NEW.txt",
+  "../data/cdc/VS14FetalPubUS_NEW.txt",
   widths = codebook_base$width,
   col.names = codebook_base$name,
   header = FALSE,
-  stringsAsFactors = FALSE,
-  n = 100
+  stringsAsFactors = FALSE
 )
+
+fd_2014_clean <- fd_2014[fd_selected_columns] %>%
+  mutate(Stillborn = 1) %>%
+  mutate(Pretern = 0) %>%
+  set_colnames(fd_renamed_columns)
+
+fwrite(fd_2014_clean, "../data/clean/fd_2014_clean.csv")
+
+remove(fd_2014, fd_2014_clean)
 ```
 
 
@@ -385,13 +487,21 @@ Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Docu
 
 ```{r}
 fd_2015 <- read.fwf(
-  "data/cdc/Fetal2015US.txt", 
+  "../data/cdc/Fetal2015US.txt", 
   widths = codebook_base$width,
   col.names = codebook_base$name,
   header = FALSE,
-  stringsAsFactors = FALSE,
-  n = 100
+  stringsAsFactors = FALSE
 )
+
+fd_2015_clean <- fd_2015[fd_selected_columns] %>%
+  mutate(Stillborn = 1) %>%
+  mutate(Pretern = 0) %>%
+  set_colnames(fd_renamed_columns)
+
+fwrite(fd_2015_clean, "../data/clean/fd_2015_clean.csv")
+
+remove(fd_2015, fd_2015_clean)
 ```
 
 ### 2016
@@ -400,13 +510,22 @@ Accompanying codebook: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Docu
 
 ```{r}
 fd_2016 <- read.fwf(
-  "data/cdc/2016_FET_Analysis_Public_US_20190409.txt", 
+  "../data/cdc/2016_FET_Analysis_Public_US_20190409.txt", 
   widths = codebook_base$width,
   col.names = codebook_base$name,
   header = FALSE,
-  stringsAsFactors = FALSE,
-  n = 100
+  stringsAsFactors = FALSE
+  #n = 100
 )
+
+fd_2016_clean <- fd_2016[fd_selected_columns] %>%
+  mutate(Stillborn = 1) %>%
+  mutate(Preterm = 0) %>%
+  set_colnames(fd_renamed_columns)
+
+fwrite(fd_2016_clean, "../data/clean/fd_2016_clean.csv")
+
+remove(fd_2016, fd_2016_clean)
 ```
 
 
@@ -433,7 +552,7 @@ renamed_columns <- c(
   "Parity",
   "PrepregnancyDiabetes",
   "GestationalDiabetes",
- "PrepregnancyHypertension",
+  "PrepregnancyHypertension",
   "GestationalHypertension",
   "HypertensionEclampsia",
   "PrevPretermBirths",

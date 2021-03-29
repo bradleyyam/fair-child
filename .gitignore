@@ -3,6 +3,7 @@
 data/cdc/*.txt
 data/cdc/*.zip
 data/cdc/*.csv
+data/clean/*.csv
 
 # R ignores
 *.Rproj*
