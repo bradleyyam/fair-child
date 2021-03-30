@@ -5,6 +5,9 @@ data/cdc/*.zip
 data/cdc/*.csv
 data/clean/*.csv
 
+# Model ignore
+models/**
+
 # R ignores
 *.Rproj*
 .Rhistory
