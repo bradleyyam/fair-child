@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 def load_preg_data(sim=True, onehots=True):
@@ -29,9 +30,9 @@ def load_preg_data(sim=True, onehots=True):
     return xtrain, ytrain, xtest, ytest, xval, yval
 
 def preg_outcome_to_binaries(y):
-    early_still = (y == 'early stillbirth').rename('early_still')
-    late_still = (y == 'late stillbirth').rename('late_still')
-    preterm = (y == 'preterm').rename('preterm')
+    early_still = (y == 'early stillbirth').to_numpy().astype(np.int)
+    late_still = (y == 'late stillbirth').to_numpy().astype(np.int)
+    preterm = (y == 'preterm').to_numpy().astype(np.int)
     return early_still, late_still, preterm
 
 def preg_outcome_to_onehot(y):

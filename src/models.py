@@ -1,4 +1,5 @@
 import lightgbm as lgb
+import numpy as np
 import pickle
 import sklearn.linear_model
 import tensorflow as tf
@@ -104,9 +105,14 @@ def fit_NN(m, xtrain, ytrain, xval, yval, batch_size, epochs):
     '''
     Reference: https://keras.io/guides/training_with_built_in_methods/
     '''
+    classes = np.unique(ytrain)
+    weights = sklearn.utils.class_weight.compute_class_weight('balanced', classes=classes, y=ytrain)
+    weights_dict = {c: w for c, w in zip(classes, weights)}
+    print('Training model with class weights,', weights_dict)
     history = m.fit(
         xtrain,
         ytrain,
+        class_weight=weights_dict,
         batch_size=batch_size,
         epochs=epochs,
         validation_data=(xval, yval),  # Monitor our metrics after each epoch, just 'cause
