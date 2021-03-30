@@ -53,8 +53,36 @@ def save_pickle(m, name):
 
 #################### Neural nets! ####################
 
-def build_NN_lrelu():
-    raise NotImplementedError("todo")
+def build_NN_lrelu(input_len):
+    N_NODES = [70, 80]
+    DROPOUT = 0.5
+    LR = 1.0
+    LR_DECAY = 0.1
+
+    # Input
+    lrelu_in = tf.keras.layers.Input(shape=(input_len,))
+    # Hidden 1  
+    x = tf.keras.layers.Dense(N_NODES[0], activation='LeakyReLU', name='lrelu1')(lrelu_in)
+    x = tf.keras.layers.Dropout(DROPOUT)(x)
+    # Hidden 2
+    x = tf.keras.layers.Dense(N_NODES[1], activation='LeakyReLU', name='lrelu2')(x)
+    x = tf.keras.layers.Dropout(DROPOUT)(x)
+    # Output
+    lrelu_out = tf.keras.layers.Dense(1, activation='sigmoid', name='output')(x)
+
+    m = tf.keras.Model(inputs=lrelu_in, outputs=lrelu_out, name='NN_lrelu')
+    lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+        initial_learning_rate=LR,
+        decay_steps=1.0,
+        decay_rate=LR_DECAY
+    )
+    m.compile(
+        loss='binary_crossentropy',
+        optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule),
+        metrics=['Accuracy', 'AUC'],
+    )
+    # model is now ready for fitting!
+    return m
 
 def build_NN_selu(input_len):
     '''
@@ -83,7 +111,7 @@ def build_NN_selu(input_len):
     x = tf.keras.layers.Dense(N_NODES, kernel_initializer='lecun_normal', activation='selu', name='selu4')(x)
     x = tf.keras.layers.AlphaDropout(ALPHA_DROPOUT)(x)
     # Output
-    selu_out = tf.keras.layers.Dense(1, activation='sigmoid')(x)
+    selu_out = tf.keras.layers.Dense(1, activation='sigmoid', name='output')(x)
 
     m = tf.keras.Model(inputs=selu_in, outputs=selu_out, name='NN_selu')
     m.compile(
@@ -95,8 +123,7 @@ def build_NN_selu(input_len):
     return m
 
 def fit_NN_lrelu(m, xtrain, ytrain, xval, yval):
-    # Gotta figure out batch size and epochs. ?????
-    raise NotImplementedError('todo')
+    return fit_NN(m, xtrain, ytrain, xval, yval, batch_size=32, epochs=20)  # Guessing on batch size, this is tensorflow default
 
 def fit_NN_selu(m, xtrain, ytrain, xval, yval):
     return fit_NN(m, xtrain, ytrain, xval, yval, batch_size=256, epochs=10)
