@@ -368,7 +368,8 @@ fd_selected_columns <- c(
   "Infertility.Treatment",
   "Fertility.Enhancing.Drugs",
   "Asst.Reproductive.Technology",
-  "Previous.Cesareans"
+  "Previous.Cesareans",
+  "Gestation.Detail.in.Weeks"
 )
 
 fd_renamed_columns <- c(
@@ -393,6 +394,65 @@ fd_renamed_columns <- c(
   "InfertilityDrugs",
   "ART",
   "PrevCesareans",
+  "Stillborn",
+  "Preterm"
+)
+
+fd_reassign <- c(
+  "Version",
+  "Delivery.Year",
+  "Mother.Single.Year.of.Age",
+  "Mother.Bridged.Race.Recode",
+  "Mother.Education.Revised",
+  "Prior.Births.Now.Dead",
+  "WIC",
+  "Cigarettes.Before.Pregnancy",
+  "BMI",
+  "Mother.Height..in.",
+  "Prepregnancy.Weight.Recode",
+  "Live.Birth.Order.Recode",
+  "Prepregnancy.Diabetes",
+  "Gestational.Diabetes",
+  "Prepregnancy.Hpertension",
+  "Gestational.Hypertension",
+  "Hypertension.Eclampsia",
+  "Infertility.Treatment",
+  "Fertility.Enhancing.Drugs",
+  "Asst.Reproductive.Technology",
+  "Previous.Cesareans",
+  "Stillborn",
+  "Gestation.Detail.in.Weeks"
+)
+
+renamed_columns <- c(
+  "Version",
+  "DeliveryYear",
+  "Age",
+  "Race",
+  "MaritalStatus",
+  "Education",
+  "PrevTerminations",
+  "WIC",
+  "PrepregnancySmoking",
+  "BMI",
+  "Height",
+  "Weight",
+  "Parity",
+  "PrepregnancyDiabetes",
+  "GestationalDiabetes",
+  "PrepregnancyHypertension",
+  "GestationalHypertension",
+  "HypertensionEclampsia",
+  "PrevPretermBirths",
+  "InfertilityTreatment",
+  "InfertilityDrugs",
+  "ART",
+  "PrevCesareans",
+  "Gonorrhea",
+  "Syphilis",
+  "Chlamydia",
+  "HepatitisB",
+  "HepatitisC",
   "Stillborn",
   "Preterm"
 )
@@ -429,29 +489,43 @@ fd_selected_columns_2013 <- c(
   #GestationalDiabetes,
   "Prepregnancy.Hpertension",
   #GestationalHypertension,
-  "Eclampsia"
+  "Eclampsia",
   #InfertilityTreatment,
   #InfertilityDrugs,
   #ART,
   #PrevCesareans
+  "Gestation.Detail.in.Weeks"
 )
 
-fd_2013_clean <- fd_2013[fd_selected_columns_2013] %>%
-  mutate(Total.Birth.Order.Recode = Total.Birth.Order.Recode
-         - Live.Birth.Order.Recode) %>%
+fd_2013_clean <- fd_2013 %>% select(fd_selected_columns_2013) %>%
+  mutate(PrevTerminations = Total.Birth.Order.Recode
+         - Live.Birth.Order.Recode)  %>%
   mutate(Diabetes=recode(Diabetes, `1`="Y", `2`="N", `8`="U", `9`="U")) %>%
   mutate(Prepregnancy.Hpertension=recode(Prepregnancy.Hpertension, `1`="Y", `2`="N", 
                                          `8`="U", `9`="U")) %>%
   mutate(Eclampsia=recode(Eclampsia, `1`="Y", `2`="N", `8`="U", `9`="U")) %>%
-  mutate(Education = NA, .after = Mother.Race.Recode) %>%
-  mutate(WIC = NA, Smoking = NA, BMI = NA, Height = NA, 
-             Weight = NA, .after = Total.Birth.Order.Recode) %>%
-  mutate(GestationalDiabetes = NA, .after = Diabetes) %>%
-  mutate(GestationalHypertension = NA, .after = Prepregnancy.Hpertension) %>%
-  mutate(InfertilityTreatment = NA, InfertilityDrugs = NA, ART= NA, 
-             PrevCesareans = NA, Stillborn = 1, "Preterm" = 0, .after = 
-               "Eclampsia") %>%
-  set_colnames(fd_renamed_columns)
+  mutate(Education = NA, WIC = NA, Smoking = NA, BMI = NA, Height = NA, Weight = NA, GestationalDiabetes = NA, GestationalHypertension = NA, InfertilityTreatment = NA, InfertilityDrugs = NA, ART = NA, PrevCesareans = NA, Stillborn = 1) %>%
+  dplyr::rename(Preterm = Gestation.Detail.in.Weeks, DeliveryYear = Delivery.Year, Age = Mother.Single.Year.of.Age, Race = Mother.Race.Recode, PrepregnancySmoking = Smoking, Parity = Live.Birth.Order.Recode, PrepregnancyDiabetes = Diabetes, PrepregnancyHypertension = Prepregnancy.Hpertension, HypertensionEclampsia = Eclampsia) %>%
+  select(fd_renamed_columns)
+
+
+  
+# fd_2013_clean <- fd_2013[fd_selected_columns_2013] %>%
+#   mutate(Total.Birth.Order.Recode = Total.Birth.Order.Recode
+#          - Live.Birth.Order.Recode) %>%
+#   mutate(Diabetes=recode(Diabetes, `1`="Y", `2`="N", `8`="U", `9`="U")) %>%
+#   mutate(Prepregnancy.Hpertension=recode(Prepregnancy.Hpertension, `1`="Y", `2`="N", 
+#                                          `8`="U", `9`="U")) %>%
+#   mutate(Eclampsia=recode(Eclampsia, `1`="Y", `2`="N", `8`="U", `9`="U")) %>%
+#   mutate(Education = NA, .after = Mother.Race.Recode) %>%
+#   mutate(WIC = NA, Smoking = NA, BMI = NA, Height = NA, 
+#              Weight = NA, .after = Total.Birth.Order.Recode) %>%
+#   mutate(GestationalDiabetes = NA, .after = Diabetes) %>%
+#   mutate(GestationalHypertension = NA, .after = Prepregnancy.Hpertension) %>%
+#   mutate(InfertilityTreatment = NA, InfertilityDrugs = NA, ART= NA, 
+#              PrevCesareans = NA, Stillborn = 1, Preterm = 0, .after = 
+#                Eclampsia) %>%
+#   set_colnames(fd_renamed_columns)
 
 fwrite(fd_2013_clean, "../data/clean/fd/fd_2013_clean.csv")
 
@@ -471,9 +545,11 @@ fd_2014 <- read.fwf(
   stringsAsFactors = FALSE
 )
 
-fd_2014_clean <- fd_2014[fd_selected_columns] %>%
+
+
+fd_2014_clean <- fd_2014 %>% select(fd_selected_columns) %>%
   mutate(Stillborn = 1) %>%
-  mutate(Pretern = 0) %>%
+  select(fd_reassign) %>%
   set_colnames(fd_renamed_columns)
 
 fwrite(fd_2014_clean, "../data/clean/fd/fd_2014_clean.csv")
@@ -495,9 +571,9 @@ fd_2015 <- read.fwf(
   stringsAsFactors = FALSE
 )
 
-fd_2015_clean <- fd_2015[fd_selected_columns] %>%
+fd_2015_clean <- fd_2015 %>% select(fd_selected_columns) %>%
   mutate(Stillborn = 1) %>%
-  mutate(Pretern = 0) %>%
+  select(fd_reassign) %>%
   set_colnames(fd_renamed_columns)
 
 fwrite(fd_2015_clean, "../data/clean/fd/fd_2015_clean.csv")
@@ -519,9 +595,9 @@ fd_2016 <- read.fwf(
   #n = 100
 )
 
-fd_2016_clean <- fd_2016[fd_selected_columns] %>%
+fd_2016_clean <- fd_2016 %>% select(fd_selected_columns) %>%
   mutate(Stillborn = 1) %>%
-  mutate(Preterm = 0) %>%
+  select(fd_reassign) %>%
   set_colnames(fd_renamed_columns)
 
 fwrite(fd_2016_clean, "../data/clean/fd/fd_2016_clean.csv")
@@ -532,13 +608,16 @@ remove(fd_2016, fd_2016_clean)
 Use the previous csv's to put all the fd data together.
 ```{r}
 # set this to your directory where the fd csv's are
-setwd("~/Desktop/fair-child/data/clean/fd")
+setwd("../data/clean/fd")
+list.files()
 fd_clean <- ldply(list.files(), read.csv, header=TRUE)
 fwrite(fd_clean, "../fd_clean.csv")
 # add columns to match with natality data
-fd_clean <- mutate(fd_clean, Gonorrhea = NA, Syphilis = NA, Chlamydia = NA, HepatitisB = NA, HepatitisC = NA, .after = PrevCesareans) %>%
-  mutate(MaritalStatus = NA, .after = Race) %>%
-  mutate(PrevPretermBirths = NA, .after = HypertensionEclampsia)
+fd_clean <- fd_clean %>% mutate(Gonorrhea = NA, Syphilis = NA, Chlamydia = NA, HepatitisB = NA, HepatitisC = NA) %>%
+  mutate(MaritalStatus = NA) %>%
+  mutate(PrevPretermBirths = NA) %>%
+  select(renamed_columns)
+setwd("../data/clean/fd")
 fwrite(fd_clean, "../fd_clean_full.csv")
 remove(fd_clean)
 ```
@@ -596,38 +675,38 @@ natl2013_clean <- natl2013 %>%
 
 fwrite(natl2013_clean, "../data/clean/natl/natl2013_clean.csv")
 
-remove(list = ls()) #so that you don't saturate your RAM
+remove(natl2013) #so that you don't saturate your RAM
 
-natl2014 <- fread("../data/cdc/natl/natl2014.csv") 
+natl2014 <- fread("../data/cdc/natl2014.csv") 
 
 natl2014_clean <- natl2014 %>% 
   mutate(Stillborn = 0) %>%
   mutate(revision = 0) %>%
-  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_pdiab, rf_gdiab, rf_phype, rf_ghype, rf_ehype, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gon, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
   set_colnames(renamed_columns)
 
 fwrite(natl2014_clean, "../data/clean/natl/natl2014_clean.csv")
 
-remove(list=ls())
+remove(natl2014)
 
-natl2015 <- fread("../data/cdc/natl/natl2015.csv") 
-
-natl2014_clean <- natl2014 %>% 
-  mutate(Stillborn = 0) %>%
-  mutate(revision = 0) %>%
-  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
-  set_colnames(renamed_columns)
-
-fwrite(natl2015_clean, "../data/clean/natl/natl2015_clean.csv")
-
-remove(list=ls())
-
-natl2016 <- fread("../data/cdc/natl/natl2016.csv") 
+natl2015 <- fread("../data/cdc/natl2015.csv") 
 
 natl2015_clean <- natl2015 %>% 
   mutate(Stillborn = 0) %>%
   mutate(revision = 0) %>%
-  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_pdiab, rf_gdiab, rf_phype, rf_ghype, rf_ehype, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gon, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  set_colnames(renamed_columns)
+
+fwrite(natl2015_clean, "../data/clean/natl/natl2015_clean.csv")
+
+remove(natl2015)
+
+natl2016 <- fread("../data/cdc/natl2016.csv") 
+
+natl2016_clean <- natl2016 %>% 
+  mutate(Stillborn = 0) %>%
+  mutate(revision = 0) %>%
+  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_pdiab, rf_gdiab, rf_phype, rf_ghype, rf_ehype, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gon, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
   set_colnames(renamed_columns)
 
 fwrite(natl2016_clean, "../data/clean/natl/natl2016_clean.csv")
@@ -638,12 +717,15 @@ remove(list=ls())
 Combine all of natality files into one csv as well.
 ```{r}
 #once again reminder to set directory to where natality files are
-setwd("~/Desktop/fair-child/data/clean/natl")
+getwd()
+setwd("../data/clean/natl/")
 natl_clean <- ldply(list.files(), read.csv, header=TRUE)
 fwrite(natl_clean, "../natl_clean.csv")
 ```
 Combine natl and fd data into one
 ```{r}
+full_dat <- rbind(fd_clean_full, natl_clean)
+fwrite(full_dat, "../data/fdata.csv")
 # fread fd_clean_full
 # combine w/ natl_clean
 # fwrite to a new file!
