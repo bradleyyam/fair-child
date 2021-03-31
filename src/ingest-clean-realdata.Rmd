@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(data.table)
 library(magrittr)
+library(dplyr)
+library(plyr)
 ```
 
 To-do list, CDC data:
@@ -25,7 +27,6 @@ To-do list, NBER data:
 * Read.csv?
 * Select features of interest
 * Decode any shorthand(?) as needed
-* Join all years
 
 To-do list, all:
 
@@ -452,7 +453,7 @@ fd_2013_clean <- fd_2013[fd_selected_columns_2013] %>%
                "Eclampsia") %>%
   set_colnames(fd_renamed_columns)
 
-fwrite(fd_2013_clean, "../data/clean/fd_2013_clean.csv")
+fwrite(fd_2013_clean, "../data/clean/fd/fd_2013_clean.csv")
 
 remove(fd_2013, fd_2013_clean)
 ```
@@ -475,7 +476,7 @@ fd_2014_clean <- fd_2014[fd_selected_columns] %>%
   mutate(Pretern = 0) %>%
   set_colnames(fd_renamed_columns)
 
-fwrite(fd_2014_clean, "../data/clean/fd_2014_clean.csv")
+fwrite(fd_2014_clean, "../data/clean/fd/fd_2014_clean.csv")
 
 remove(fd_2014, fd_2014_clean)
 ```
@@ -499,7 +500,7 @@ fd_2015_clean <- fd_2015[fd_selected_columns] %>%
   mutate(Pretern = 0) %>%
   set_colnames(fd_renamed_columns)
 
-fwrite(fd_2015_clean, "../data/clean/fd_2015_clean.csv")
+fwrite(fd_2015_clean, "../data/clean/fd/fd_2015_clean.csv")
 
 remove(fd_2015, fd_2015_clean)
 ```
@@ -523,9 +524,23 @@ fd_2016_clean <- fd_2016[fd_selected_columns] %>%
   mutate(Preterm = 0) %>%
   set_colnames(fd_renamed_columns)
 
-fwrite(fd_2016_clean, "../data/clean/fd_2016_clean.csv")
+fwrite(fd_2016_clean, "../data/clean/fd/fd_2016_clean.csv")
 
 remove(fd_2016, fd_2016_clean)
+```
+
+Use the previous csv's to put all the fd data together.
+```{r}
+# set this to your directory where the fd csv's are
+setwd("~/Desktop/fair-child/data/clean/fd")
+fd_clean <- ldply(list.files(), read.csv, header=TRUE)
+fwrite(fd_clean, "../fd_clean.csv")
+# add columns to match with natality data
+fd_clean <- mutate(fd_clean, Gonorrhea = NA, Syphilis = NA, Chlamydia = NA, HepatitisB = NA, HepatitisC = NA, .after = PrevCesareans) %>%
+  mutate(MaritalStatus = NA, .after = Race) %>%
+  mutate(PrevPretermBirths = NA, .after = HypertensionEclampsia)
+fwrite(fd_clean, "../fd_clean_full.csv")
+remove(fd_clean)
 ```
 
 
@@ -542,6 +557,7 @@ renamed_columns <- c(
   "DeliveryYear",
   "Age",
   "Race",
+  "MaritalStatus",
   "Education",
   "PrevTerminations",
   "WIC",
@@ -575,20 +591,60 @@ natl2013 <- fread("../data/cdc/natl2013.csv")
 
 natl2013_clean <- natl2013 %>% 
   mutate(Stillborn = 0) %>% 
-  select(revision, dob_yy, mager, mracerec, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  select(revision, dob_yy, mager, mracerec, mar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
   set_colnames(renamed_columns)
 
-fwrite(natl2013_clean, "../data/clean/natl2013_clean.csv")
+fwrite(natl2013_clean, "../data/clean/natl/natl2013_clean.csv")
 
 remove(list = ls()) #so that you don't saturate your RAM
 
-natl2014 <- fread("../data/cdc/natl2014.csv") 
+natl2014 <- fread("../data/cdc/natl/natl2014.csv") 
 
 natl2014_clean <- natl2014 %>% 
   mutate(Stillborn = 0) %>%
   mutate(revision = 0) %>%
-  select(revision, dob_yy, mager, mbrace, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
   set_colnames(renamed_columns)
 
+fwrite(natl2014_clean, "../data/clean/natl/natl2014_clean.csv")
 
+remove(list=ls())
+
+natl2015 <- fread("../data/cdc/natl/natl2015.csv") 
+
+natl2014_clean <- natl2014 %>% 
+  mutate(Stillborn = 0) %>%
+  mutate(revision = 0) %>%
+  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  set_colnames(renamed_columns)
+
+fwrite(natl2015_clean, "../data/clean/natl/natl2015_clean.csv")
+
+remove(list=ls())
+
+natl2016 <- fread("../data/cdc/natl/natl2016.csv") 
+
+natl2015_clean <- natl2015 %>% 
+  mutate(Stillborn = 0) %>%
+  mutate(revision = 0) %>%
+  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  set_colnames(renamed_columns)
+
+fwrite(natl2016_clean, "../data/clean/natl/natl2016_clean.csv")
+
+remove(list=ls())
+```
+
+Combine all of natality files into one csv as well.
+```{r}
+#once again reminder to set directory to where natality files are
+setwd("~/Desktop/fair-child/data/clean/natl")
+natl_clean <- ldply(list.files(), read.csv, header=TRUE)
+fwrite(natl_clean, "../natl_clean.csv")
+```
+Combine natl and fd data into one
+```{r}
+# fread fd_clean_full
+# combine w/ natl_clean
+# fwrite to a new file!
 ```
