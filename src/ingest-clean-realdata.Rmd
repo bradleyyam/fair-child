@@ -13,7 +13,7 @@ library(magrittr)
 library(dplyr)
 library(plyr)
 library(naniar)
-
+library(caret)
 ```
 
 To-do list, CDC data:
@@ -785,7 +785,7 @@ stillbirth_Classify <- full_dat %>%
   filter(Age >= 18) %>%
   select(-Stillborn, -Preterm, -Gonorrhea, -Syphilis, -Chlamydia, -HepatitisB, -HepatitisC, -MaritalStatus, -PrevPretermBirths, -ART, -InfertilityDrugs) %>% 
   na.omit() %>% 
-  mutate(id = row_number()) %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
   mutate(BMI = normalize(BMI)) %>%
   mutate(Height = normalize(Height)) %>%
   mutate(Weight = normalize(Weight)) %>%
@@ -793,17 +793,48 @@ stillbirth_Classify <- full_dat %>%
          race_hot = 1,
          Education = paste("education", Education, sep = "_"),
          education_hot = 1) %>%
-  spread(key = Race, value = race_hot, fill = 0) %>%
-  spread(key = Education, value = education_hot, fill = 0) # 13 while preserving factors also
+  tidyr::spread(key = Race, value = race_hot, fill = 0) %>%
+  tidyr::spread(key = Education, value = education_hot, fill = 0) # 13 while preserving factors also
+
+stillbirth_Classify <- select(stillbirth_Classify, -id, -Version, -DeliveryYear)
+
+fwrite(stillbirth_Classify, "../data/final/stillbirth_classify.csv")
+
+idx_train <- stillbirth_Classify$outcome %>% createDataPartition(p = 0.7, list = FALSE)
+stillbirth_train <- stillbirth_Classify[idx_train, ]
+
+holdout <- stillbirth_Classify[-idx_train, ]
+idx_feature <- holdout$outcome %>% createDataPartition(p = 1/3, list = FALSE)
+stillbirth_feature <- holdout[idx_feature, ]
+
+holdout <- holdout[-idx_feature, ]
+idx_val <- holdout$outcome %>% createDataPartition(p = 1/2, list = FALSE)
+stillbirth_val <- holdout[idx_val, ]
+
+stillbirth_test <- holdout[-idx_val, ]
+
+fwrite(stillbirth_train, "../data/final/stillbirth_train.csv")
+fwrite(stillbirth_feature, "../data/final/stillbirth_feature.csv")
+fwrite(stillbirth_val, "../data/final/stillbirth_val.csv")
+fwrite(stillbirth_test, "../data/final/stillbirth_test.csv")
 
 preterm_classify <- full_dat %>%
   filter(!(Preterm < 21 & Stillborn == 0)) %>%
   filter(Age >= 18) %>%
   select(-Stillborn, -Preterm, -ART, -InfertilityDrugs) %>%
   na.omit() %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
   mutate(BMI = normalize(BMI)) %>%
-  mutate(height = normalize(height)) %>%
-  mutate(weight = normalize(weight)) %>%
+  mutate(Height = normalize(Height)) %>%
+  mutate(Weight = normalize(Weight)) %>%
+  mutate(Race = paste("race", Race, sep = "_"),
+         race_hot = 1,
+         Education = paste("education", Education, sep = "_"),
+         education_hot = 1) %>%
+  tidyr::spread(key = Race, value = race_hot, fill = 0) %>%
+  tidyr::spread(key = Education, value = education_hot, fill = 0) # 13 while preserving factors also
+
+preterm_Classify <- select(preterm_Classify, -id, -Version, -DeliveryYear)
   
   
 
