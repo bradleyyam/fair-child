@@ -32,6 +32,8 @@ Or to save a new dependencies list:
 $ pip freeze > requirements.txt
 ```
 
+If the pip install doesn't work, I believe that all the packages used for now are: `numpy`, `pandas`, `tensorflow`, `scikit-learn`, and `lightgbm`.
+
 ### R setup
 
 For our R scripts and mixed R/Python scripts, RStudio is an editor and interpreter. We currently require the `tidyverse`, `caret`, and `fakeR` packages, as well as `reticulate`, which provides Python interoperability.

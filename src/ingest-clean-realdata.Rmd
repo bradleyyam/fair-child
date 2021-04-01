@@ -730,3 +730,43 @@ fwrite(full_dat, "../data/fdata.csv")
 # combine w/ natl_clean
 # fwrite to a new file!
 ```
+
+Remap to match simulation data.
+```{r}
+#using current sheet in google drive
+full_dat <- fread("../data/fdata.csv")
+  full_dat <- mutate(full_dat, MaritalStatus=recode(MaritalStatus, `1` = 1, `2`= 0)) %>%
+  mutate(Race=recode(Race, `1` = "White", 
+                     `2` = "Black", 
+                     `3` = "AmeriIndian", 
+                     `4` = "AsianPI")) %>%
+  mutate(Education=recode(Education, `1` = "lteq8",
+                          `2` = "HSIncomplete",
+                          `3` = "HSGraduate",
+                          `4` = "CollIncomplete",
+                          `5` = "Associate",
+                          `6` = "Bachelor",
+                          `7` = "Master",
+                          `8` = "Doctorate",
+                          `9` = "",
+                          )) %>%
+  mutate(PrevTerminations=recode(PrevTerminations, `9` = "")) %>%
+  mutate(WIC=recode(WIC, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(PrepregnancyDiabetes=recode(PrepregnancyDiabetes, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(GestationalDiabetes=recode(GestationalDiabetes, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(PrepregnancyHypertension=recode(PrepregnancyHypertension, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(GestationalHypertension=recode(GestationalHypertension, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(HypertensionEclampsia=recode(HypertensionEclampsia, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(InfertilityTreatment=recode(InfertilityTreatment, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(InfertilityDrugs=recode(InfertilityDrugs, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(ART=recode(ART, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(Gonorrhea=recode(Gonorrhea, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(Syphilis=recode(Syphilis, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(Chlamydia=recode(Chlamydia, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(HepatitisB=recode(HepatitisB, "N" = "0", "Y" = "1", "U" = "")) %>%
+  mutate(HepatitisC=recode(HepatitisC, "N" = "0", "Y" = "1", "U" = ""))
+
+#drop rows with empties
+full_dat <- na.omit(full_dat)
+#ummmm somehow this drops it to only 3185 rows??? which seems extremely incorrect
+```
