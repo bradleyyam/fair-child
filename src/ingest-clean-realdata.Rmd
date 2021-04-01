@@ -670,7 +670,7 @@ natl2013 <- fread("../data/cdc/natl2013.csv")
 
 natl2013_clean <- natl2013 %>% 
   mutate(Stillborn = 0) %>% 
-  select(revision, dob_yy, mager, mracerec, mar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  select(revision, dob_yy, mager, mracerec, mar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_diab, rf_gest, rf_phyp, rf_ghyp, rf_eclam, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gono, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, combgest) %>%
   set_colnames(renamed_columns)
 
 fwrite(natl2013_clean, "../data/clean/natl/natl2013_clean.csv")
@@ -682,7 +682,7 @@ natl2014 <- fread("../data/cdc/natl2014.csv")
 natl2014_clean <- natl2014 %>% 
   mutate(Stillborn = 0) %>%
   mutate(revision = 0) %>%
-  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_pdiab, rf_gdiab, rf_phype, rf_ghype, rf_ehype, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gon, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_pdiab, rf_gdiab, rf_phype, rf_ghype, rf_ehype, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gon, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, combgest) %>%
   set_colnames(renamed_columns)
 
 fwrite(natl2014_clean, "../data/clean/natl/natl2014_clean.csv")
@@ -694,8 +694,8 @@ natl2015 <- fread("../data/cdc/natl2015.csv")
 natl2015_clean <- natl2015 %>% 
   mutate(Stillborn = 0) %>%
   mutate(revision = 0) %>%
-  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_pdiab, rf_gdiab, rf_phype, rf_ghype, rf_ehype, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gon, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
-  set_colnames(renamed_columns)
+  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_pdiab, rf_gdiab, rf_phype, rf_ghype, rf_ehype, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gon, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, combgest) %>%
+  set_colnames(renamed_columns)gest
 
 fwrite(natl2015_clean, "../data/clean/natl/natl2015_clean.csv")
 
@@ -706,7 +706,7 @@ natl2016 <- fread("../data/cdc/natl2016.csv")
 natl2016_clean <- natl2016 %>% 
   mutate(Stillborn = 0) %>%
   mutate(revision = 0) %>%
-  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_pdiab, rf_gdiab, rf_phype, rf_ghype, rf_ehype, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gon, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, gestrec3) %>%
+  select(revision, dob_yy, mager, mbrace, dmar, meduc, priorterm, wic, cig_0, bmi, m_ht_in, pwgt_r, lbo_rec, rf_pdiab, rf_gdiab, rf_phype, rf_ghype, rf_ehype, rf_ppterm, rf_inftr, rf_fedrg, rf_artec, rf_cesar, ip_gon, ip_syph, ip_chlam, ip_hepatb, ip_hepatc, Stillborn, combgest) %>%
   set_colnames(renamed_columns)
 
 fwrite(natl2016_clean, "../data/clean/natl/natl2016_clean.csv")
