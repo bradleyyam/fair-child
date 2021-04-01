@@ -12,6 +12,8 @@ library(data.table)
 library(magrittr)
 library(dplyr)
 library(plyr)
+library(naniar)
+
 ```
 
 To-do list, CDC data:
@@ -456,6 +458,10 @@ renamed_columns <- c(
   "Stillborn",
   "Preterm"
 )
+
+normalize <- function(x)  {
+  return ((x - mean(x)) / sd(x))
+}
 ```
 
 
@@ -734,8 +740,9 @@ fwrite(full_dat, "../data/fdata.csv")
 Remap to match simulation data.
 ```{r}
 #using current sheet in google drive
-full_dat <- fread("../data/fdata.csv")
-  full_dat <- mutate(full_dat, MaritalStatus=recode(MaritalStatus, `1` = 1, `2`= 0)) %>%
+full_dat1 <- fread("../data/fdata.csv")
+  full_dat <- full_dat1 %>%
+    mutate(MaritalStatus=recode(MaritalStatus, `1` = 1, `2`= 0)) %>%
   mutate(Race=recode(Race, `1` = "White", 
                      `2` = "Black", 
                      `3` = "AmeriIndian", 
@@ -747,26 +754,59 @@ full_dat <- fread("../data/fdata.csv")
                           `5` = "Associate",
                           `6` = "Bachelor",
                           `7` = "Master",
-                          `8` = "Doctorate",
-                          `9` = "",
+                          `8` = "Doctorate"
                           )) %>%
-  mutate(PrevTerminations=recode(PrevTerminations, `9` = "")) %>%
-  mutate(WIC=recode(WIC, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(PrepregnancyDiabetes=recode(PrepregnancyDiabetes, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(GestationalDiabetes=recode(GestationalDiabetes, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(PrepregnancyHypertension=recode(PrepregnancyHypertension, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(GestationalHypertension=recode(GestationalHypertension, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(HypertensionEclampsia=recode(HypertensionEclampsia, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(InfertilityTreatment=recode(InfertilityTreatment, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(InfertilityDrugs=recode(InfertilityDrugs, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(ART=recode(ART, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(Gonorrhea=recode(Gonorrhea, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(Syphilis=recode(Syphilis, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(Chlamydia=recode(Chlamydia, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(HepatitisB=recode(HepatitisB, "N" = "0", "Y" = "1", "U" = "")) %>%
-  mutate(HepatitisC=recode(HepatitisC, "N" = "0", "Y" = "1", "U" = ""))
+  replace_with_na(replace = list(PrevTerminations = 99, BMI = 99.9, Height = 99, Weight = 999, PrevPretermBirths = "", PrevCesareans = "", PrepregnancySmoking = 99, Parity = 9, Preterm = 99)) %>%
+  mutate(WIC=recode(WIC, "N" = 0, "Y" = 1)) %>%
+  mutate(PrevPretermBirths=recode(PrevPretermBirths, "N" = 0, "Y" = 1)) %>%
+  mutate(PrevCesareans=recode(PrevCesareans, "N" = 0, "Y" = 1)) %>%
+  mutate(PrepregnancyDiabetes=recode(PrepregnancyDiabetes, "N" = 0, "Y" = 1)) %>%
+  mutate(GestationalDiabetes=recode(GestationalDiabetes, "N" = 0, "Y" = 1)) %>%
+  mutate(PrepregnancyHypertension=recode(PrepregnancyHypertension, "N" = 0, "Y" = 1)) %>%
+  mutate(GestationalHypertension=recode(GestationalHypertension, "N" = 0, "Y" = 1)) %>%
+  mutate(HypertensionEclampsia=recode(HypertensionEclampsia, "N" = 0, "Y" = 1)) %>%
+  mutate(InfertilityTreatment=recode(InfertilityTreatment, "N" = 0, "Y" = 1)) %>%
+  mutate(InfertilityDrugs=recode(InfertilityDrugs, "N" = 0, "Y" = 1)) %>%
+  mutate(ART=recode(ART, "N" = 0, "Y" = 1)) %>%
+  mutate(Gonorrhea=recode(Gonorrhea, "N" = 0, "Y" = 1)) %>%
+  mutate(Syphilis=recode(Syphilis, "N" = 0, "Y" = 1)) %>%
+  mutate(Chlamydia=recode(Chlamydia, "N" = 0, "Y" = 1)) %>%
+  mutate(HepatitisB=recode(HepatitisB, "N" = 0, "Y" = 1)) %>%
+  mutate(HepatitisC=recode(HepatitisC, "N" = 0, "Y" = 1)) %>%
+  mutate(outcome = case_when(
+    Stillborn == 0 & Preterm < 37  ~ "preterm",
+    Stillborn == 0 & Preterm >= 37 ~ "normal",
+    Stillborn == 1 & Preterm < 28  ~ "early stillbirth",
+    Stillborn == 1 & Preterm >= 28 ~ "late stillbirth"
+  ))
+
+stillbirth_Classify <- full_dat %>%
+  filter(!(Preterm < 21 & Stillborn == 0)) %>%
+  filter(Age >= 18) %>%
+  select(-Stillborn, -Preterm, -Gonorrhea, -Syphilis, -Chlamydia, -HepatitisB, -HepatitisC, -MaritalStatus, -PrevPretermBirths, -ART, -InfertilityDrugs) %>% 
+  na.omit() %>% 
+  mutate(id = row_number()) %>%
+  mutate(BMI = normalize(BMI)) %>%
+  mutate(Height = normalize(Height)) %>%
+  mutate(Weight = normalize(Weight)) %>%
+  mutate(Race = paste("race", Race, sep = "_"),
+         race_hot = 1,
+         Education = paste("education", Education, sep = "_"),
+         education_hot = 1) %>%
+  spread(key = Race, value = race_hot, fill = 0) %>%
+  spread(key = Education, value = education_hot, fill = 0) # 13 while preserving factors also
+
+preterm_classify <- full_dat %>%
+  filter(!(Preterm < 21 & Stillborn == 0)) %>%
+  filter(Age >= 18) %>%
+  select(-Stillborn, -Preterm, -ART, -InfertilityDrugs) %>%
+  na.omit() %>%
+  mutate(BMI = normalize(BMI)) %>%
+  mutate(height = normalize(height)) %>%
+  mutate(weight = normalize(weight)) %>%
+  
+  
 
 #drop rows with empties
-full_dat <- na.omit(full_dat)
 #ummmm somehow this drops it to only 3185 rows??? which seems extremely incorrect
 ```
