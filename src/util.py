@@ -1,6 +1,30 @@
 import numpy as np
 import pandas as pd
 
+def load_preg_data_final(datafile, path='data/final/'):
+    '''
+    The function below only works on our simulated data.
+    This one was rewritten to work with our real, preprocessed data.
+    '''
+    assert datafile in ['stillbirth', 'preterm']
+    # List of three pandas data frames
+    data = []
+    for setname in  ['train', 'test', 'val']:
+        print(f'Loading {setname} data for {datafile}...')
+        data.append(pd.read_csv(f'{path}{datafile}_{setname}.csv'))
+        print('\tdone.')
+    # Separate into predictor variables (x) and labels (y)
+    xtrain, xtest, xval = data[0].drop(columns=['outcome']), data[1].drop(columns=['outcome']), data[2].drop(columns=['outcome'])
+    ytrain, ytest, yval = data[0]['outcome'], data[1]['outcome'], data[2]['outcome']
+    # Done!
+    return xtrain, ytrain, xtest, ytest, xval, yval
+
+def outcome_to_binary(y, outcome):
+    assert outcome in ['early stillbirth', 'late stillbirth', 'preterm']
+    return (y == outcome).to_numpy().astype(np.int)
+
+# N.B. THESE FUNCTIONS ARE OLD / DESIGNED FOR THE SIMULATION DATA
+
 def load_preg_data(sim=True, onehots=True):
     # Assumes that we're in the top-level working directory
     if sim:
