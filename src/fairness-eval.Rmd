@@ -61,7 +61,7 @@ calculate_results <- function(model, model_yhat_fn) {
     results[i, c(2, 3)] <- calculate_AUC(y, yhat)
   }
   
-  return(as_tibble(results))
+  return(data.frame(results))
 }
 ```
 
