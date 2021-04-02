@@ -1,31 +1,146 @@
 ---
 title: "judgment day"
+output: pdf_document
 ---
 
 ```{r}
 library(reticulate)
+library(data.table)
+library(tidyverse)
+library(pROC)
 use_virtualenv("../venv/", required = TRUE)
-```
-
-```{r}
 source_python("util.py")
 source_python("models.py")
 ```
 
+# Functions
+
 ```{r}
-data <- load_preg_data_final(datafile='stillbirth', path='../data/final/')
-# xtrain <- data[1]
-# ytrain <- unlist(data[2])
-xtest <- data[3]
-ytest <- unlist(data[4])
-# xval <- data[5]
-# yval <- unlist(data[6])
-rm(data)
-ytest <- as.numeric((ytest == 'early stillbirth'))
-# yval <- outcome_to_binary(yval, outcome='early stillbirth')
+calculate_yhat_lr <- function(model, x) {
+  return(model$predict_proba(x)[,2])
+}
+
+calculate_yhat_NN <- function(model, x) {
+  return(model$predict(x))
+}
+
+calculate_TPR <- function(y, yhat) {
+  P <- sum(y == 1)
+  TP <- sum(((yhat > 0.5) == 1) & (y == 1))
+  TPR <- TP / P
+  return(TPR)
+}
+
+calculate_AUC <- function(y, yhat) {
+  # https://stackoverflow.com/questions/50866797/how-do-i-calculate-auc-from-two-continuous-variables-in-r
+  df <- data.frame(a=y, p=yhat)
+  df <- df[order(df$a),]
+  roc_obj <- roc(df$a, df$p)
+  AUC <- auc(roc_obj)
+  TPR10 <- coords(roc_obj, x=0.9, input="specificity")$sensitivity
+  return(c(AUC=AUC, TPR10=TPR10))
+}
+
+# This function assumes that the data variables are already defined in the environment.
+# E.g. Black_x, AsianPI_y, etc.
+calculate_results <- function(model, model_yhat_fn) {
+  # (1) Prepare results matrix
+  race_eth_all <- c('White', 'Black', 'AsianPI', 'AmeriIndian')
+  results <- matrix(nrow = length(race_eth_all), ncol = 3)
+  rownames(results) <- race_eth_all
+  colnames(results) <- c('TPR', 'AUC', 'TPR10')
+  
+  # (2) Calculate TPR, AUC, and TPR10 for each race/ethnicity
+  for (i in 1:length(race_eth_all)) {
+    race_eth <- race_eth_all[i]
+    x <- get(paste0(race_eth, '_x'))  # get() gets a variable in the environment by name
+    y <- get(paste0(race_eth, '_y'))
+    yhat <- model_yhat_fn(model, x)  # Note this depends on function arguments
+    
+    results[i, 1] <- calculate_TPR(y, yhat)
+    results[i, c(2, 3)] <- calculate_AUC(y, yhat)
+  }
+  
+  return(as_tibble(results))
+}
 ```
 
+# Bias?? hm
+
+# Late Stillbirth
+
+```{r}
+x <- fread('../data/final/stillbirth_test.csv')
+outcome <- 'late stillbirth'
+x$outcome <- as.numeric(x$outcome == outcome)
+
+AmeriIndian_x <- x %>% filter(race_AmeriIndian == 1)
+AmeriIndian_y <- AmeriIndian_x$outcome
+AmeriIndian_x <- AmeriIndian_x %>% select(-outcome)
+
+AsianPI_x <- x %>% filter(race_AsianPI == 1)
+AsianPI_y <- AsianPI_x$outcome
+AsianPI_x <- AsianPI_x %>% select(-outcome)
+
+Black_x <- x %>% filter(race_Black == 1)
+Black_y <- Black_x$outcome
+Black_x <- Black_x %>% select(-outcome)
+
+White_x <- x %>% filter(race_White == 1)
+White_y <- White_x$outcome
+White_x <- White_x %>% select(-outcome)
+```
+
+## SELU Network
+
+```{r}
+selu_late <- load_NN("../models/selu_late")
+calculate_results(selu_late, calculate_yhat_NN)
+
+mean((selu_late$predict(AmeriIndian_x) > 0.5) == AmeriIndian_y)
+mean((selu_late$predict(AsianPI_x) > 0.5) == AsianPI_y)
+mean((selu_late$predict(Black_x) > 0.5) == Black_y)
+mean((selu_late$predict(White_x) > 0.5) == White_y)
+```
+
+# Early Stillbirth
+
+```{r}
+x <- fread('../data/final/stillbirth_test.csv')
+outcome <- 'early stillbirth'
+x$outcome <- as.numeric(x$outcome == outcome)
+
+AmeriIndian_x <- x %>% filter(race_AmeriIndian == 1)
+AmeriIndian_y <- AmeriIndian_x$outcome
+AmeriIndian_x <- AmeriIndian_x %>% select(-outcome)
+
+AsianPI_x <- x %>% filter(race_AsianPI == 1)
+AsianPI_y <- AsianPI_x$outcome
+AsianPI_x <- AsianPI_x %>% select(-outcome)
+
+Black_x <- x %>% filter(race_Black == 1)
+Black_y <- Black_x$outcome
+Black_x <- Black_x %>% select(-outcome)
+
+White_x <- x %>% filter(race_White == 1)
+White_y <- White_x$outcome
+White_x <- White_x %>% select(-outcome)
+```
+
+## Logistic Regression
 
 ```{r}
 lr_early <- load_pickle("../models/lr_early")
+calculate_results(model = lr_early, model_yhat_fn = calculate_yhat_lr)
 ```
+
+## LightGBM
+
+```{r}
+gb_early <- load_pickle("../models/gb_early")
+calculate_results(model = gb_early, model_yhat_fn = calculate_yhat_NN)
+```
+
+# Notes
+
+> Further research would also include inspecting the reproducibility of the results beyond the population of the United States with different ML models. The best machine learning models (SELU network, LGBM and averaged ensemble) were able to produce repeatable performance over two data sets. Using these machine learning models, especially for early stillbirth, could provide earlier identification of at-risk pregnancies with high accuracy and provide tools for better utilization of healthcare resources targeted to those needing it most.
