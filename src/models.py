@@ -26,9 +26,12 @@ def build_gbdt():
     Scikit-Learn model for gradient boosting, with LightGBM backend
     Reference: https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMModel.html
     '''
+    # m = lgb.LGBMClassifier(
+    #     num_leaves=48, min_child_samples=500, max_depth=-1, learning_rate=0.001, colsample_bytree=1.0, subsample=1.0,
+    #     boosting_type='gbdt', n_estimators=2000, objective='binary', random_state=None, is_unbalance=True, first_metric_only=True)
     m = lgb.LGBMClassifier(
-        num_leaves=48, min_child_samples=500, max_depth=-1, learning_rate=0.001, colsample_bytree=1.0, subsample=1.0,
-        boosting_type='gbdt', n_estimators=2000, objective='binary', random_state=None, is_unbalance=True)
+        num_leaves=48, min_child_samples=500, max_depth=-1, learning_rate=0.01, colsample_bytree=1.0, subsample=1.0,
+        boosting_type='gbdt', n_estimators=2000, objective='binary', random_state=None, first_metric_only=True)
     # N.b. that "learning rate" and "shrinkage rate" are sometimes interchanged
     # In this case, "colsample_bytree" to the SKLearn api is "feature_fraction", and "subsample" is "bagging_fraction", and "n_estimators" is "num_iterations"
     # See https://lightgbm.readthedocs.io/en/latest/Parameters.html
@@ -36,7 +39,7 @@ def build_gbdt():
     return m
     
 def fit_gbdt(m, xtrain, ytrain, xval, yval, verbose=100):
-    m.fit(xtrain, ytrain, eval_set=(xval, yval), eval_metric='auc', verbose=verbose)
+    m.fit(xtrain, ytrain, eval_set=(xval, yval), eval_metric=['auc', 'binary_error'], early_stopping_rounds=500, verbose=verbose)
 
 
 #################### Saving and loading as pickle, for the two above model types (not NNs) ####################
@@ -56,8 +59,9 @@ def save_pickle(m, name):
 def build_NN_lrelu(input_len):
     N_NODES = [70, 80]
     DROPOUT = 0.5
-    LR = 1.0
-    LR_DECAY = 0.1
+    # LR = 1.0
+    # LR_DECAY = 0.1
+    ADAM_LR = 0.01
 
     # Input
     lrelu_in = tf.keras.layers.Input(shape=(input_len,))
@@ -71,14 +75,15 @@ def build_NN_lrelu(input_len):
     lrelu_out = tf.keras.layers.Dense(1, activation='sigmoid', name='output')(x)
 
     m = tf.keras.Model(inputs=lrelu_in, outputs=lrelu_out, name='NN_lrelu')
-    lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-        initial_learning_rate=LR,
-        decay_steps=1.0,
-        decay_rate=LR_DECAY
-    )
+    # lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+    #     initial_learning_rate=LR,
+    #     decay_steps=1.0,
+    #     decay_rate=LR_DECAY
+    # )
+    lr_adam = tf.keras.optimizers.Adam(learning_rate=ADAM_LR)
     m.compile(
         loss='binary_crossentropy',
-        optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule),
+        optimizer=lr_adam,
         metrics=['Accuracy', 'AUC'],
     )
     # model is now ready for fitting!

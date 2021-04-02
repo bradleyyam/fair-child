@@ -1,0 +1,31 @@
+---
+title: "judgment day"
+---
+
+```{r}
+library(reticulate)
+use_virtualenv("../venv/", required = TRUE)
+```
+
+```{r}
+source_python("util.py")
+source_python("models.py")
+```
+
+```{r}
+data <- load_preg_data_final(datafile='stillbirth', path='../data/final/')
+# xtrain <- data[1]
+# ytrain <- unlist(data[2])
+xtest <- data[3]
+ytest <- unlist(data[4])
+# xval <- data[5]
+# yval <- unlist(data[6])
+rm(data)
+ytest <- as.numeric((ytest == 'early stillbirth'))
+# yval <- outcome_to_binary(yval, outcome='early stillbirth')
+```
+
+
+```{r}
+lr_early <- load_pickle("../models/lr_early")
+```

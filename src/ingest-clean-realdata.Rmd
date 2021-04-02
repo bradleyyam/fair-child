@@ -7,28 +7,14 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-library(tidyverse)
-library(data.table)
-library(magrittr)
-library(dplyr)
 library(plyr)
+library(dplyr)
+library(tidyverse)
+library(magrittr)
+library(data.table)
 library(naniar)
 library(caret)
 ```
-
-To-do list, CDC data:
-
-* Copy the variable names and column widths for (?) 2013, 2014, 2016 into variables here; import all CDC data.
-* Select variables of interest
-* For each variable, decode CDC's shorthand into the data format and datatypes we desire
-* Also decode "flags" as needed
-* Join all years
-
-To-do list, NBER data:
-
-* Read.csv?
-* Select features of interest
-* Decode any shorthand(?) as needed
 
 To-do list, all:
 
@@ -459,9 +445,7 @@ renamed_columns <- c(
   "Preterm"
 )
 
-normalize <- function(x)  {
-  return ((x - mean(x)) / sd(x))
-}
+
 ```
 
 
@@ -738,11 +722,20 @@ fwrite(full_dat, "../data/fdata.csv")
 ```
 
 Remap to match simulation data.
+
 ```{r}
-#using current sheet in google drive
+normalize <- function(x)  {
+  return ((x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE))
+}
+```
+
+
+```{r}
+# Rename, reformat vars; create outcome var
 full_dat1 <- fread("../data/fdata.csv")
-  full_dat <- full_dat1 %>%
-    mutate(MaritalStatus=recode(MaritalStatus, `1` = 1, `2`= 0)) %>%
+
+full_dat <- full_dat1 %>%
+  mutate(MaritalStatus=recode(MaritalStatus, `1` = 1, `2`= 0)) %>%
   mutate(Race=recode(Race, `1` = "White", 
                      `2` = "Black", 
                      `3` = "AmeriIndian", 
@@ -780,26 +773,39 @@ full_dat1 <- fread("../data/fdata.csv")
     Stillborn == 1 & Preterm >= 28 ~ "late stillbirth"
   ))
 
-stillbirth_Classify <- full_dat %>%
+# Drop based on exclusion criteria; normalize continuous variables; create one-hots
+rm(full_dat1)  # cove needs this aha
+gc()           # this actually drops my memory usage by 20%
+full_dat <- full_dat %>%
   filter(!(Preterm < 21 & Stillborn == 0)) %>%
   filter(Age >= 18) %>%
-  select(-Stillborn, -Preterm, -Gonorrhea, -Syphilis, -Chlamydia, -HepatitisB, -HepatitisC, -MaritalStatus, -PrevPretermBirths, -ART, -InfertilityDrugs) %>% 
-  na.omit() %>% 
   dplyr::mutate(id = dplyr::row_number()) %>%
   mutate(BMI = normalize(BMI)) %>%
   mutate(Height = normalize(Height)) %>%
-  mutate(Weight = normalize(Weight)) %>%
+  # Excluded weight
+  # mutate(Weight = normalize(Weight)) %>%
+  # The authors called these "discrete" variables so it was unclear whether or not they normalized them
+  mutate(PrepregnancySmoking = normalize(PrepregnancySmoking)) %>%
+  mutate(PrevTerminations = normalize(PrevTerminations)) %>%
+  mutate(Parity = normalize(Parity)) %>%
   mutate(Race = paste("race", Race, sep = "_"),
          race_hot = 1,
          Education = paste("education", Education, sep = "_"),
          education_hot = 1) %>%
   tidyr::spread(key = Race, value = race_hot, fill = 0) %>%
-  tidyr::spread(key = Education, value = education_hot, fill = 0) # 13 while preserving factors also
+  tidyr::spread(key = Education, value = education_hot, fill = 0) %>%
+  select(-id, -Version, -DeliveryYear, -Weight, -Stillborn, -Preterm)
+```
 
-stillbirth_Classify <- select(stillbirth_Classify, -id, -Version, -DeliveryYear)
+```{r}
+# Make specific dataset for stillbirth, dropping NAs
+stillbirth_Classify <- full_dat %>%
+  select(-Gonorrhea, -Syphilis, -Chlamydia, -HepatitisB, -HepatitisC, -MaritalStatus, -PrevPretermBirths, -ART, -InfertilityDrugs) %>% 
+  na.omit()
 
 fwrite(stillbirth_Classify, "../data/final/stillbirth_classify.csv")
 
+# Split stillbirth into train, feature selection, validation, and test sets
 idx_train <- stillbirth_Classify$outcome %>% createDataPartition(p = 0.7, list = FALSE)
 stillbirth_train <- stillbirth_Classify[idx_train, ]
 
@@ -817,27 +823,33 @@ fwrite(stillbirth_train, "../data/final/stillbirth_train.csv")
 fwrite(stillbirth_feature, "../data/final/stillbirth_feature.csv")
 fwrite(stillbirth_val, "../data/final/stillbirth_val.csv")
 fwrite(stillbirth_test, "../data/final/stillbirth_test.csv")
-
-preterm_classify <- full_dat %>%
-  filter(!(Preterm < 21 & Stillborn == 0)) %>%
-  filter(Age >= 18) %>%
-  select(-Stillborn, -Preterm, -ART, -InfertilityDrugs) %>%
-  na.omit() %>%
-  dplyr::mutate(id = dplyr::row_number()) %>%
-  mutate(BMI = normalize(BMI)) %>%
-  mutate(Height = normalize(Height)) %>%
-  mutate(Weight = normalize(Weight)) %>%
-  mutate(Race = paste("race", Race, sep = "_"),
-         race_hot = 1,
-         Education = paste("education", Education, sep = "_"),
-         education_hot = 1) %>%
-  tidyr::spread(key = Race, value = race_hot, fill = 0) %>%
-  tidyr::spread(key = Education, value = education_hot, fill = 0) # 13 while preserving factors also
-
-preterm_Classify <- select(preterm_Classify, -id, -Version, -DeliveryYear)
-  
-  
-
-#drop rows with empties
-#ummmm somehow this drops it to only 3185 rows??? which seems extremely incorrect
 ```
+
+```{r}
+# Make specific dataset for preterm, dropping NAs
+preterm_Classify <- full_dat %>%
+  select(-ART, -InfertilityDrugs) %>%
+  na.omit()
+
+fwrite(preterm_Classify, "../data/final/preterm_classify.csv")
+
+# Split preterm into train, feature selection, validation, and test sets
+idx_train <- preterm_Classify$outcome %>% createDataPartition(p = 0.7, list = FALSE)
+preterm_train <- preterm_Classify[idx_train, ]
+
+holdout <- preterm_Classify[-idx_train, ]
+idx_feature <- holdout$outcome %>% createDataPartition(p = 1/3, list = FALSE)
+preterm_feature <- holdout[idx_feature, ]
+
+holdout <- holdout[-idx_feature, ]
+idx_val <- holdout$outcome %>% createDataPartition(p = 1/2, list = FALSE)
+preterm_val <- holdout[idx_val, ]
+
+preterm_test <- holdout[-idx_val, ]
+
+fwrite(preterm_train, "../data/final/preterm_train.csv")
+fwrite(preterm_feature, "../data/final/preterm_feature.csv")
+fwrite(preterm_val, "../data/final/preterm_val.csv")
+fwrite(preterm_test, "../data/final/preterm_test.csv")
+```
+
