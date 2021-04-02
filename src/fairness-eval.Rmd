@@ -32,7 +32,6 @@ calculate_TPR <- function(y, yhat) {
 }
 
 calculate_AUC <- function(y, yhat) {
-  # https://stackoverflow.com/questions/50866797/how-do-i-calculate-auc-from-two-continuous-variables-in-r
   df <- data.frame(a=y, p=yhat)
   df <- df[order(df$a),]
   roc_obj <- roc(df$a, df$p)
@@ -46,9 +45,9 @@ calculate_AUC <- function(y, yhat) {
 calculate_results <- function(model, model_yhat_fn) {
   # (1) Prepare results matrix
   race_eth_all <- c('White', 'Black', 'AsianPI', 'AmeriIndian')
-  results <- matrix(nrow = length(race_eth_all), ncol = 3)
+  results <- matrix(nrow = length(race_eth_all), ncol = 4)
   rownames(results) <- race_eth_all
-  colnames(results) <- c('TPR', 'AUC', 'TPR10')
+  colnames(results) <- c('TPR', 'AUC', 'TPR10', 'Accuracy')
   
   # (2) Calculate TPR, AUC, and TPR10 for each race/ethnicity
   for (i in 1:length(race_eth_all)) {
@@ -59,49 +58,14 @@ calculate_results <- function(model, model_yhat_fn) {
     
     results[i, 1] <- calculate_TPR(y, yhat)
     results[i, c(2, 3)] <- calculate_AUC(y, yhat)
+    results[i, 4] <- mean((yhat > 0.5) == y)
   }
   
   return(data.frame(results))
 }
 ```
 
-# Bias?? hm
-
-# Late Stillbirth
-
-```{r}
-x <- fread('../data/final/stillbirth_test.csv')
-outcome <- 'late stillbirth'
-x$outcome <- as.numeric(x$outcome == outcome)
-
-AmeriIndian_x <- x %>% filter(race_AmeriIndian == 1)
-AmeriIndian_y <- AmeriIndian_x$outcome
-AmeriIndian_x <- AmeriIndian_x %>% select(-outcome)
-
-AsianPI_x <- x %>% filter(race_AsianPI == 1)
-AsianPI_y <- AsianPI_x$outcome
-AsianPI_x <- AsianPI_x %>% select(-outcome)
-
-Black_x <- x %>% filter(race_Black == 1)
-Black_y <- Black_x$outcome
-Black_x <- Black_x %>% select(-outcome)
-
-White_x <- x %>% filter(race_White == 1)
-White_y <- White_x$outcome
-White_x <- White_x %>% select(-outcome)
-```
-
-## SELU Network
-
-```{r}
-selu_late <- load_NN("../models/selu_late")
-calculate_results(selu_late, calculate_yhat_NN)
-
-mean((selu_late$predict(AmeriIndian_x) > 0.5) == AmeriIndian_y)
-mean((selu_late$predict(AsianPI_x) > 0.5) == AsianPI_y)
-mean((selu_late$predict(Black_x) > 0.5) == Black_y)
-mean((selu_late$predict(White_x) > 0.5) == White_y)
-```
+# Fairness evaluations
 
 # Early Stillbirth
 
@@ -141,6 +105,58 @@ gb_early <- load_pickle("../models/gb_early")
 calculate_results(model = gb_early, model_yhat_fn = calculate_yhat_NN)
 ```
 
+## ReLU Network
+
+```{r}
+relu_early <- load_NN("../models/lrelu_early")
+calculate_results(relu_early, calculate_yhat_NN)
+```
+
+
+## SELU Network
+
+```{r}
+selu_early <- load_NN("../models/selu_early")
+calculate_results(selu_early, calculate_yhat_NN)
+```
+
+
+# Late Stillbirth
+
+```{r}
+x <- fread('../data/final/stillbirth_test.csv')
+outcome <- 'late stillbirth'
+x$outcome <- as.numeric(x$outcome == outcome)
+
+AmeriIndian_x <- x %>% filter(race_AmeriIndian == 1)
+AmeriIndian_y <- AmeriIndian_x$outcome
+AmeriIndian_x <- AmeriIndian_x %>% select(-outcome)
+
+AsianPI_x <- x %>% filter(race_AsianPI == 1)
+AsianPI_y <- AsianPI_x$outcome
+AsianPI_x <- AsianPI_x %>% select(-outcome)
+
+Black_x <- x %>% filter(race_Black == 1)
+Black_y <- Black_x$outcome
+Black_x <- Black_x %>% select(-outcome)
+
+White_x <- x %>% filter(race_White == 1)
+White_y <- White_x$outcome
+White_x <- White_x %>% select(-outcome)
+```
+
+## SELU Network
+
+```{r}
+selu_late <- load_NN("../models/selu_late")
+calculate_results(selu_late, calculate_yhat_NN)
+
+mean((selu_late$predict(AmeriIndian_x) > 0.5) == AmeriIndian_y)
+mean((selu_late$predict(AsianPI_x) > 0.5) == AsianPI_y)
+mean((selu_late$predict(Black_x) > 0.5) == Black_y)
+mean((selu_late$predict(White_x) > 0.5) == White_y)
+```
+
 # Notes
 
-> Further research would also include inspecting the reproducibility of the results beyond the population of the United States with different ML models. The best machine learning models (SELU network, LGBM and averaged ensemble) were able to produce repeatable performance over two data sets. Using these machine learning models, especially for early stillbirth, could provide earlier identification of at-risk pregnancies with high accuracy and provide tools for better utilization of healthcare resources targeted to those needing it most.
+> "Further research would also include inspecting the reproducibility of the results beyond the population of the United States with different ML models. The best machine learning models (SELU network, LGBM and averaged ensemble) were able to produce repeatable performance over two data sets. Using these machine learning models, especially for early stillbirth, could provide earlier identification of at-risk pregnancies with high accuracy and provide tools for better utilization of healthcare resources targeted to those needing it most."
