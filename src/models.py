@@ -31,7 +31,7 @@ def build_gbdt():
     #     boosting_type='gbdt', n_estimators=2000, objective='binary', random_state=None, is_unbalance=True, first_metric_only=True)
     m = lgb.LGBMClassifier(
         num_leaves=48, min_child_samples=500, max_depth=-1, learning_rate=0.01, colsample_bytree=1.0, subsample=1.0,
-        boosting_type='gbdt', n_estimators=2000, objective='binary', random_state=None, first_metric_only=True)
+        boosting_type='gbdt', n_estimators=2000, objective='binary', random_state=None, first_metric_only=True, is_unbalance=True)
     # N.b. that "learning rate" and "shrinkage rate" are sometimes interchanged
     # In this case, "colsample_bytree" to the SKLearn api is "feature_fraction", and "subsample" is "bagging_fraction", and "n_estimators" is "num_iterations"
     # See https://lightgbm.readthedocs.io/en/latest/Parameters.html
@@ -53,6 +53,7 @@ def load_pickle(filename):
 def save_pickle(m, name):
     with open(name, 'wb') as file:
         pickle.dump(m, file)
+
 
 #################### Neural nets! ####################
 
@@ -80,10 +81,9 @@ def build_NN_lrelu(input_len):
     #     decay_steps=1.0,
     #     decay_rate=LR_DECAY
     # )
-    lr_adam = tf.keras.optimizers.Adam(learning_rate=ADAM_LR)
     m.compile(
         loss='binary_crossentropy',
-        optimizer=lr_adam,
+        optimizer=tf.keras.optimizers.Adam(learning_rate=ADAM_LR),
         metrics=['Accuracy', 'AUC'],
     )
     # model is now ready for fitting!
@@ -128,7 +128,7 @@ def build_NN_selu(input_len):
     return m
 
 def fit_NN_lrelu(m, xtrain, ytrain, xval, yval):
-    return fit_NN(m, xtrain, ytrain, xval, yval, batch_size=32, epochs=20)  # Guessing on batch size, this is tensorflow default
+    return fit_NN(m, xtrain, ytrain, xval, yval, batch_size=256, epochs=20)  # Guessing on batch size
 
 def fit_NN_selu(m, xtrain, ytrain, xval, yval):
     return fit_NN(m, xtrain, ytrain, xval, yval, batch_size=256, epochs=10)
