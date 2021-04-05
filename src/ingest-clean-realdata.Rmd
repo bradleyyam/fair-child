@@ -853,3 +853,44 @@ fwrite(preterm_val, "../data/final/preterm_val.csv")
 fwrite(preterm_test, "../data/final/preterm_test.csv")
 ```
 
+Some data exploration
+```{r}
+#run chunk @line 734 to get full_dat w/ preprocessing
+
+#gives table with frequencies of (race, outcome) tuple in whole dataset
+#ie what is frequency of Black & preterm
+absolute_freq_dat <- full_dat %>%
+  group_by(Race, outcome) %>%
+  dplyr::summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+```
+
+```{r}
+#gives table with frequencies of outcome within each race 
+#ie given Black, what is frequency of preterm?
+AmeriIndian <- full_dat %>% 
+  filter(Race == "AmeriIndian") %>% 
+  group_by(Race, outcome) %>%
+  dplyr::summarise(n = n())  %>%
+  mutate(freq = n / sum(n))
+AsianPI <- full_dat %>% 
+  filter(Race == "AsianPI") %>% 
+  group_by(Race, outcome) %>%
+  dplyr::summarise(n = n())  %>%
+  mutate(freq = n / sum(n))
+White <- full_dat %>% 
+  filter(Race == "White") %>% 
+  group_by(Race, outcome) %>%
+  dplyr::summarise(n = n())  %>%
+  mutate(freq = n / sum(n))
+Black <- full_dat %>% 
+  filter(Race == "Black") %>% 
+  group_by(Race, outcome) %>%
+  dplyr::summarise(n = n())  %>%
+  mutate(freq = n / sum(n))
+
+remove(full_dat)
+relative_freq_dat <- do.call("rbind", list(AmeriIndian, AsianPI, White, Black))
+remove(AmeriIndian, AsianPI, White, Black)
+```
+
