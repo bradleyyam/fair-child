@@ -16,7 +16,7 @@ source_python("models.py")
 # Functions
 
 ```{r}
-calculate_yhat_lr <- function(model, x) {
+calculate_yhat_sklearn <- function(model, x) {
   return(model$predict_proba(x)[,2])
 }
 
@@ -95,14 +95,14 @@ White_x <- White_x %>% select(-outcome)
 
 ```{r}
 lr_early <- load_pickle("../models/lr_early")
-calculate_results(model = lr_early, model_yhat_fn = calculate_yhat_lr)
+calculate_results(model = lr_early, model_yhat_fn = calculate_yhat_sklearn)
 ```
 
 ## LightGBM
 
 ```{r}
 gb_early <- load_pickle("../models/gb_early")
-calculate_results(model = gb_early, model_yhat_fn = calculate_yhat_NN)
+calculate_results(model = gb_early, model_yhat_fn = calculate_yhat_sklearn)
 ```
 
 ## ReLU Network
@@ -119,7 +119,6 @@ calculate_results(relu_early, calculate_yhat_NN)
 selu_early <- load_NN("../models/selu_early")
 calculate_results(selu_early, calculate_yhat_NN)
 ```
-
 
 # Late Stillbirth
 
@@ -145,16 +144,84 @@ White_y <- White_x$outcome
 White_x <- White_x %>% select(-outcome)
 ```
 
+## Logistic Regression
+
+```{r}
+lr_late <- load_pickle("../models/lr_late")
+calculate_results(model = lr_late, model_yhat_fn = calculate_yhat_sklearn)
+```
+
+## LightGBM
+
+```{r}
+gb_late <- load_pickle("../models/gb_late")
+calculate_results(model = gb_late, model_yhat_fn = calculate_yhat_sklearn)
+```
+
+## ReLU Network
+
+```{r}
+relu_late <- load_NN("../models/lrelu_late")
+calculate_results(relu_late, calculate_yhat_NN)
+```
+
 ## SELU Network
 
 ```{r}
 selu_late <- load_NN("../models/selu_late")
 calculate_results(selu_late, calculate_yhat_NN)
+```
 
-mean((selu_late$predict(AmeriIndian_x) > 0.5) == AmeriIndian_y)
-mean((selu_late$predict(AsianPI_x) > 0.5) == AsianPI_y)
-mean((selu_late$predict(Black_x) > 0.5) == Black_y)
-mean((selu_late$predict(White_x) > 0.5) == White_y)
+# Preterm Birth
+
+```{r}
+x <- fread('../data/final/preterm_test.csv')
+outcome <- 'preterm'
+x$outcome <- as.numeric(x$outcome == outcome)
+
+AmeriIndian_x <- x %>% filter(race_AmeriIndian == 1)
+AmeriIndian_y <- AmeriIndian_x$outcome
+AmeriIndian_x <- AmeriIndian_x %>% select(-outcome)
+
+AsianPI_x <- x %>% filter(race_AsianPI == 1)
+AsianPI_y <- AsianPI_x$outcome
+AsianPI_x <- AsianPI_x %>% select(-outcome)
+
+Black_x <- x %>% filter(race_Black == 1)
+Black_y <- Black_x$outcome
+Black_x <- Black_x %>% select(-outcome)
+
+White_x <- x %>% filter(race_White == 1)
+White_y <- White_x$outcome
+White_x <- White_x %>% select(-outcome)
+```
+
+## Logistic Regression
+
+```{r}
+lr_preterm <- load_pickle("../models/lr_preterm")
+calculate_results(model = lr_preterm, model_yhat_fn = calculate_yhat_sklearn)
+```
+
+## LightGBM
+
+```{r}
+gb_preterm <- load_pickle("../models/gb_preterm")
+calculate_results(model = gb_preterm, model_yhat_fn = calculate_yhat_sklearn)
+```
+
+## ReLU Network
+
+```{r}
+relu_preterm <- load_NN("../models/lrelu_preterm")
+calculate_results(relu_preterm, calculate_yhat_NN)
+```
+
+## SELU Network
+
+```{r}
+selu_preterm <- load_NN("../models/selu_preterm")
+calculate_results(selu_preterm, calculate_yhat_NN)
 ```
 
 # Notes
