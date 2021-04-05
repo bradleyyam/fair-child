@@ -31,12 +31,19 @@ calculate_TPR <- function(y, yhat) {
   return(TPR)
 }
 
+calculate_FPR <- function(y, yhat) {
+  N <- sum(y == 0)
+  FP <- sum(((yhat > 0.5) == 1) & (y == 0))
+  FPR <- FP / N
+  return(FPR)
+}
+
 calculate_AUC <- function(y, yhat) {
   df <- data.frame(a=y, p=yhat)
   df <- df[order(df$a),]
   roc_obj <- roc(df$a, df$p)
   AUC <- auc(roc_obj)
-  TPR10 <- coords(roc_obj, x=0.9, input="specificity")$sensitivity
+  TPR10 <- coords(roc_obj, x=0.9, input="specificity")$sensitivity  # Sensitivity is AKA the FPR
   return(c(AUC=AUC, TPR10=TPR10))
 }
 
@@ -45,9 +52,9 @@ calculate_AUC <- function(y, yhat) {
 calculate_results <- function(model, model_yhat_fn) {
   # (1) Prepare results matrix
   race_eth_all <- c('White', 'Black', 'AsianPI', 'AmeriIndian')
-  results <- matrix(nrow = length(race_eth_all), ncol = 4)
+  results <- matrix(nrow = length(race_eth_all), ncol = 5)
   rownames(results) <- race_eth_all
-  colnames(results) <- c('TPR', 'AUC', 'TPR10', 'Accuracy')
+  colnames(results) <- c('TPR', 'FPR',  'AUC', 'TPR10', 'Accuracy')
   
   # (2) Calculate TPR, AUC, and TPR10 for each race/ethnicity
   for (i in 1:length(race_eth_all)) {
@@ -57,8 +64,9 @@ calculate_results <- function(model, model_yhat_fn) {
     yhat <- model_yhat_fn(model, x)  # Note this depends on function arguments
     
     results[i, 1] <- calculate_TPR(y, yhat)
-    results[i, c(2, 3)] <- calculate_AUC(y, yhat)
-    results[i, 4] <- mean((yhat > 0.5) == y)
+    results[i, 2] <- calculate_FPR(y, yhat)
+    results[i, c(3, 4)] <- calculate_AUC(y, yhat)
+    results[i, 5] <- mean((yhat > 0.5) == y)
   }
   
   return(data.frame(results))
@@ -95,21 +103,24 @@ White_x <- White_x %>% select(-outcome)
 
 ```{r}
 lr_early <- load_pickle("../models/lr_early")
-calculate_results(model = lr_early, model_yhat_fn = calculate_yhat_sklearn)
+lr_early_r <- calculate_results(model = lr_early, model_yhat_fn = calculate_yhat_sklearn)
+lr_early_r
 ```
 
 ## LightGBM
 
 ```{r}
 gb_early <- load_pickle("../models/gb_early")
-calculate_results(model = gb_early, model_yhat_fn = calculate_yhat_sklearn)
+gb_early_r <- calculate_results(model = gb_early, model_yhat_fn = calculate_yhat_sklearn)
+gb_early_r
 ```
 
 ## ReLU Network
 
 ```{r}
 relu_early <- load_NN("../models/lrelu_early")
-calculate_results(relu_early, calculate_yhat_NN)
+relu_early_r <- calculate_results(relu_early, calculate_yhat_NN)
+relu_early_r
 ```
 
 
@@ -117,7 +128,8 @@ calculate_results(relu_early, calculate_yhat_NN)
 
 ```{r}
 selu_early <- load_NN("../models/selu_early")
-calculate_results(selu_early, calculate_yhat_NN)
+selu_early_r <- calculate_results(selu_early, calculate_yhat_NN)
+selu_early_r
 ```
 
 # Late Stillbirth
@@ -148,28 +160,32 @@ White_x <- White_x %>% select(-outcome)
 
 ```{r}
 lr_late <- load_pickle("../models/lr_late")
-calculate_results(model = lr_late, model_yhat_fn = calculate_yhat_sklearn)
+lr_late_r <- calculate_results(model = lr_late, model_yhat_fn = calculate_yhat_sklearn)
+lr_late_r
 ```
 
 ## LightGBM
 
 ```{r}
 gb_late <- load_pickle("../models/gb_late")
-calculate_results(model = gb_late, model_yhat_fn = calculate_yhat_sklearn)
+gb_late_r <- calculate_results(model = gb_late, model_yhat_fn = calculate_yhat_sklearn)
+gb_late_r
 ```
 
 ## ReLU Network
 
 ```{r}
 relu_late <- load_NN("../models/lrelu_late")
-calculate_results(relu_late, calculate_yhat_NN)
+relu_late_r <- calculate_results(relu_late, calculate_yhat_NN)
+relu_late_r
 ```
 
 ## SELU Network
 
 ```{r}
 selu_late <- load_NN("../models/selu_late")
-calculate_results(selu_late, calculate_yhat_NN)
+selu_late_r <- calculate_results(selu_late, calculate_yhat_NN)
+selu_late_r
 ```
 
 # Preterm Birth
@@ -200,29 +216,88 @@ White_x <- White_x %>% select(-outcome)
 
 ```{r}
 lr_preterm <- load_pickle("../models/lr_preterm")
-calculate_results(model = lr_preterm, model_yhat_fn = calculate_yhat_sklearn)
+lr_preterm_r <- calculate_results(model = lr_preterm, model_yhat_fn = calculate_yhat_sklearn)
+lr_preterm_r
 ```
 
 ## LightGBM
 
 ```{r}
 gb_preterm <- load_pickle("../models/gb_preterm")
-calculate_results(model = gb_preterm, model_yhat_fn = calculate_yhat_sklearn)
+gb_preterm_r <- calculate_results(model = gb_preterm, model_yhat_fn = calculate_yhat_sklearn)
+gb_preterm_r
 ```
 
 ## ReLU Network
 
 ```{r}
 relu_preterm <- load_NN("../models/lrelu_preterm")
-calculate_results(relu_preterm, calculate_yhat_NN)
+relu_preterm_r <- calculate_results(relu_preterm, calculate_yhat_NN)
+relu_preterm_r
 ```
 
 ## SELU Network
 
 ```{r}
 selu_preterm <- load_NN("../models/selu_preterm")
-calculate_results(selu_preterm, calculate_yhat_NN)
+selu_preterm_r <- calculate_results(selu_preterm, calculate_yhat_NN)
+selu_preterm_r
 ```
+
+# Save results
+
+```{r}
+lr_early_r$model <- 'lr'
+lr_early_r$task <- 'early'
+lr_early_r$raceeth <- rownames(lr_early_r)
+gb_early_r$model <- 'gb'
+gb_early_r$task <- 'early'
+gb_early_r$raceeth <- rownames(gb_early_r)
+relu_early_r$model <- 'lrelu'
+relu_early_r$task <- 'early'
+relu_early_r$raceeth <- rownames(relu_early_r)
+selu_early_r$model <- 'selu'
+selu_early_r$task <- 'early'
+selu_early_r$raceeth <- rownames(selu_early_r)
+
+lr_late_r$model <- 'lr'
+lr_late_r$task <- 'late'
+lr_late_r$raceeth <- rownames(lr_late_r)
+gb_late_r$model <- 'gb'
+gb_late_r$task <- 'late'
+gb_late_r$raceeth <- rownames(gb_late_r)
+relu_late_r$model <- 'lrelu'
+relu_late_r$task <- 'late'
+relu_late_r$raceeth <- rownames(relu_late_r)
+selu_late_r$model <- 'selu'
+selu_late_r$task <- 'late'
+selu_late_r$raceeth <- rownames(selu_late_r)
+
+
+lr_preterm_r$model <- 'lr'
+lr_preterm_r$task <- 'preterm'
+lr_preterm_r$raceeth <- rownames(lr_preterm_r)
+gb_preterm_r$model <- 'gb'
+gb_preterm_r$task <- 'preterm'
+gb_preterm_r$raceeth <- rownames(gb_preterm_r)
+relu_preterm_r$model <- 'lrelu'
+relu_preterm_r$task <- 'preterm'
+relu_preterm_r$raceeth <- rownames(relu_preterm_r)
+selu_preterm_r$model <- 'selu'
+selu_preterm_r$task <- 'preterm'
+selu_preterm_r$raceeth <- rownames(selu_preterm_r)
+
+results_varnames <- ls(pattern = '.+_r$')
+results_combined <- mget(results_varnames) %>%
+  bind_rows(.id = 'varname') %>%
+  remove_rownames()
+results_combined
+```
+
+```{r}
+fwrite(results_combined, '../data/results.csv')
+```
+
 
 # Notes
 
