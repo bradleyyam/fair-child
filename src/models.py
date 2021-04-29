@@ -67,10 +67,10 @@ def build_NN_lrelu(input_len):
     # Input
     lrelu_in = tf.keras.layers.Input(shape=(input_len,))
     # Hidden 1  
-    x = tf.keras.layers.Dense(N_NODES[0], activation='LeakyReLU', name='lrelu1')(lrelu_in)
+    x = tf.keras.layers.Dense(N_NODES[0], activation=tf.keras.layers.LeakyReLU(), name='lrelu1')(lrelu_in)
     x = tf.keras.layers.Dropout(DROPOUT)(x)
     # Hidden 2
-    x = tf.keras.layers.Dense(N_NODES[1], activation='LeakyReLU', name='lrelu2')(x)
+    x = tf.keras.layers.Dense(N_NODES[1], activation=tf.keras.layers.LeakyReLU(), name='lrelu2')(x)
     x = tf.keras.layers.Dropout(DROPOUT)(x)
     # Output
     lrelu_out = tf.keras.layers.Dense(1, activation='sigmoid', name='output')(x)
