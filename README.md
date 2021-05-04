@@ -80,7 +80,7 @@ All code to replicate this project may be found in `src/`. We proceed through th
     * `src/preprocess-realdata_i.R`: Processes the reformatted natality data. Split into four files for memory management reasons; run in order from `i=0` to `3`.
 
 2. **Model Training and Saving.** We provide a small library of Python functions to train, save and load all model objects, as well as a Python notebook to train all models.
-    * `src/models.py`: Methods to train, save, and load all models. Neural networks are Tensorflow/Keras models, while logistic regression and LightGBM models are scikit-learn models. (Do not need to run this; is sourced by model training.)
+    * `src/models.py`: Methods to train, save, and load all models. Neural networks are Tensorflow/Keras models, while logistic regression and LightGBM models are scikit-learn models. If you want to run training on a GPU, some of the activation functions may need to be tweaked for different versions of tensorflow. (Do not need to run this; is sourced by model training.)
     * `src/util.py`: Methods to load training data for the sake of model training. (Do not need to run this; is sourced by model training.)
     * `src/train-all-models.ipynb`: Notebook to train all models, for all tasks, both race-aware and race-unaware.
 
