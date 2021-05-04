@@ -1,5 +1,5 @@
 ---
-title: "viz"
+title: "Viz for Model Results and Positivity Rates"
 output: pdf_document
 ---
 
@@ -19,31 +19,62 @@ library(ggthemes)
 results <- fread('../data/results.csv')
 # Lengthen
 results_long <- results %>%
-  pivot_longer(cols = c(TPR, FPR, Accuracy), names_to = 'metric', values_to = 'value') %>%
-  select(-c(AUC, TPR10))
+  pivot_longer(cols = c(TPR, FPR, Accuracy, AUC, TPR10, Positivity), names_to = 'metric', values_to = 'value')
 # Relevel race factor for plotting
 results_long[results_long$raceeth == 'AmeriIndian', ]$raceeth <- 'AIAN'
 results_long$raceeth <-  factor(results_long$raceeth, levels=c('Black', 'AIAN', 'AsianPI', 'White'))
-# Relevel metric and task for plotting
-results_long$metric <- factor(results_long$metric, levels=c('TPR', 'FPR', 'Accuracy'))
+# Relevel task for plotting
 results_long$task <- factor(results_long$task, levels=c('preterm', 'early', 'late'))
 
-# Just plot TPR
-# ggplot(results, aes(x = raceeth, y = TPR)) +
-#   geom_boxplot() +
-#   geom_point(position = position_jitter(width = 0.1, height = 0.1)) +
-#   facet_wrap(~ task) +
-#   theme_clean()
+# Dataframes for our boxplot charts. "Long" form with three metrics of interest.
+results_l_3 <- results_long %>%
+  filter(metric == 'TPR' | metric == 'FPR' | metric == 'Accuracy')
+results_l_3$metric <- factor(results_l_3$metric, levels=c('TPR', 'FPR', 'Accuracy'))
+results_l_3_aware <- results_l_3 %>%
+  filter(aware == TRUE)
+results_l_3_unaware <- results_l_3 %>%
+  filter(aware == FALSE)
 
-# Plots all 3!
-g_results <- ggplot(results_long, aes(x = task, y = value, color = raceeth)) +
-  geom_boxplot() +
-  geom_point(position = position_jitter(width = 0.1, height = 0.1)) +
+# Plot all 3 metrics!
+g_results <- ggplot(results_l_3_aware, aes(x = task, y = value, color = raceeth)) +
+  geom_boxplot(outlier.size = 0) +
+  geom_point(aes(shape=model, fill=raceeth), color='black', position = position_jitter(width = 0.05, height = 0.05)) +
+  scale_shape_manual(values=c(21, 22, 23, 24))+
   facet_grid(metric ~ raceeth) +
+  ggtitle('Metrics for Race-Aware Models') +
+  ylim(-0.05, 1.05) +
   theme_bw() +
-  theme(axis.title = element_blank(), legend.position = 'none')
+  theme(axis.title = element_blank())
+g_results
+ggsave('../data/results_boxplot_aware.pdf', width = 13, height = 9, units = 'in', dpi=300)
+ggsave('../data/results_boxplot_aware.png', width = 13, height = 9, units = 'in', dpi=300)
 
-ggsave('../data/results_boxplot.png', width = 13, height = 9, units = 'in', dpi=300)
+
+g_results <- ggplot(results_l_3_unaware, aes(x = task, y = value, color = raceeth)) +
+  geom_boxplot(outlier.size = 0) +
+  geom_point(aes(shape=model, fill=raceeth), color='black', position = position_jitter(width = 0.05, height = 0.05)) +
+  facet_grid(metric ~ raceeth) +
+  scale_shape_manual(values=c(21, 22, 23, 24))+
+  ggtitle('Metrics for Race-Unaware Models') +
+  ylim(-0.05, 1.05) +
+  theme_bw() +
+  theme(axis.title = element_blank())
+g_results
+ggsave('../data/results_boxplot_unaware.pdf', width = 13, height = 9, units = 'in', dpi=300)
+ggsave('../data/results_boxplot_unaware.png', width = 13, height = 9, units = 'in', dpi=300)
+
+g_results <- ggplot(results_l_3_unaware, aes(x = task, y = value, color = raceeth)) +
+  geom_boxplot(outlier.size = 0) +
+  geom_point(aes(shape=model, fill=raceeth), color='black', position = position_jitter(width = 0.05, height = 0.05)) +
+  facet_grid(metric ~ raceeth) +
+  scale_shape_manual(values=c(21, 22, 23, 24))+
+  ggtitle('Metrics for Race-Unaware Models') +
+  ylim(-0.05, 1.05) +
+  theme_bw() +
+  theme(axis.title = element_blank())
+g_results
+ggsave('../data/results_boxplot_unaware.pdf', width = 13, height = 9, units = 'in', dpi=300)
+ggsave('../data/results_boxplot_unaware.png', width = 13, height = 9, units = 'in', dpi=300)
 ```
 
 # Data
@@ -76,18 +107,6 @@ breakdown_early
 rm(train_sb)
 ```
 
-Late stillbirth:
-       race
-outcome        AIAN     AsianPI       Black       White
-      0 0.997796497 0.998745093 0.997486491 0.998535573
-      1 0.002203503 0.001254907 0.002513509 0.001464427
-      
-Early stillbirth:
-       race
-outcome        AIAN     AsianPI       Black       White
-      0 0.998149801 0.998417221 0.996007534 0.998276736
-      1 0.001850199 0.001582779 0.003992466 0.001723264
-
 ```{r}
 train_pt <- fread('../data/final/stillbirth_train.csv')
 train_pt[train_pt == ''] <- NA
@@ -110,28 +129,57 @@ breakdown_pt
 rm(train_pt)
 ```
 
-Preterm birth:
-       race
-outcome       AIAN    AsianPI      Black      White
-      0 0.87224330 0.90314728 0.84478333 0.89816627
-      1 0.12775670 0.09685272 0.15521667 0.10183373
-
 ```{r}
 # Combine to long format
-breakdown <- bind_rows(breakdown_late[2,], breakdown_early[2,], breakdown_pt[2,]) %>%
+# Row 2 of "breakdown" tables contain the positivity rates
+breakdown_data <- bind_rows(breakdown_late[2,], breakdown_early[2,], breakdown_pt[2,]) %>%
   cbind(task = c('late', 'early', 'preterm')) %>%
-  pivot_longer(cols = c('AIAN', 'AsianPI', 'Black', 'White'), names_to = 'raceeth', values_to = 'positivity')
+  pivot_longer(cols = c('AIAN', 'AsianPI', 'Black', 'White'), names_to = 'raceeth', values_to = 'Positivity') %>%
+  mutate(source = 'Ground Truth', .before=1)
+breakdown_data$raceeth <- factor(breakdown_data$raceeth, levels=c('Black', 'AIAN', 'AsianPI', 'White'))
+breakdown_data$task <- factor(breakdown_data$task, levels=c('preterm', 'early', 'late'))
 
-# Relevel for consistency
-breakdown$raceeth <-  factor(breakdown$raceeth, levels=c('Black', 'AIAN', 'AsianPI', 'White'))
-breakdown$task <- factor(breakdown$task, levels=c('preterm', 'early', 'late'))
-
-g_breakdown <- ggplot(breakdown, aes(x = raceeth, y = positivity, fill = raceeth)) +
+# Just ground truth plot
+g_breakdown <- ggplot(breakdown_data, aes(x = raceeth, y = Positivity, fill = raceeth)) +
   geom_col() +
   facet_wrap(. ~ task, scales = 'free') +
   theme_bw() +
   theme(axis.title = element_blank(), legend.position = 'none')
-
+g_breakdown
+ggsave('../data/data_barplot_breakdown.pdf', width = 13, height = 9, units = 'in', dpi=300)
 ggsave('../data/data_barplot_breakdown.png', width = 13, height = 9, units = 'in', dpi=300)
-```
 
+# Now, plot em all.
+breakdown_models <- results_long %>%
+  filter(metric == 'Positivity') %>%
+  select(model, task, raceeth, value, aware) %>%
+  rename(Positivity = value, source = model)
+breakdown_data_awaredummy <- breakdown_data %>%
+  mutate(aware = TRUE)
+breakdown_data_unawaredummy <- breakdown_data %>%
+  mutate(aware = FALSE)
+breakdown <- rbind(breakdown_data_awaredummy, breakdown_data_unawaredummy, breakdown_models) %>%
+  mutate(aware = ifelse(aware, 'Race-Aware', 'Race-Unaware'))
+
+# Relevel for consistency
+breakdown$raceeth <- factor(breakdown$raceeth, levels=c('Black', 'AIAN', 'AsianPI', 'White'))
+breakdown$task <- factor(breakdown$task, levels=c('preterm', 'early', 'late'))
+breakdown$source <- factor(breakdown$source, levels=c(
+  'Ground Truth', 'gb', 'lr', 'lrelu', 'selu'
+))
+
+ggplot(breakdown, aes(x = raceeth, y = Positivity, fill = source, group = source)) +
+  geom_col(position='dodge') +
+  facet_wrap(aware ~ task) +
+  theme_bw() +
+  ggtitle('Breakdown of Positivity Rates by Race/Ethnicity', subtitle = 'Across training data ground truth and each models\' predictions')
+ggsave('../data/data-models_barplot_breakdown.pdf', width = 13, height = 9, units = 'in', dpi=300)
+ggsave('../data/data-models_barplot_breakdown.png', width = 13, height = 9, units = 'in', dpi=300)
+
+# ggplot(breakdown %>% filter(aware == 'Race-Aware'), aes(x = raceeth, y = Positivity, fill = source, group = source)) +
+#   geom_col(position='dodge') +
+#   facet_wrap(. ~ task) +
+#   theme_bw() +
+#   ggtitle('Breakdown of Positivity Rates by Race/Ethnicity', subtitle = 'Across training data ground truth and each race-aware models\' predictions')
+# ggsave('../data/data-models_barplot_breakdown_aware.png', width = 13, height = 9, units = 'in', dpi=300)
+```
