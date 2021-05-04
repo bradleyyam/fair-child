@@ -47,14 +47,20 @@ calculate_AUC <- function(y, yhat) {
   return(c(AUC=AUC, TPR10=TPR10))
 }
 
+calculate_Positivity <- function(yhat) {
+  yhat_binary <- (yhat > 0.5)
+  positivity <- mean(yhat_binary)
+  return(positivity)
+}
+
 # This function assumes that the data variables are already defined in the environment.
 # E.g. Black_x, AsianPI_y, etc.
 calculate_results <- function(model, model_yhat_fn) {
   # (1) Prepare results matrix
   race_eth_all <- c('White', 'Black', 'AsianPI', 'AmeriIndian')
-  results <- matrix(nrow = length(race_eth_all), ncol = 5)
+  results <- matrix(nrow = length(race_eth_all), ncol = 6)
   rownames(results) <- race_eth_all
-  colnames(results) <- c('TPR', 'FPR',  'AUC', 'TPR10', 'Accuracy')
+  colnames(results) <- c('TPR', 'FPR',  'AUC', 'TPR10', 'Accuracy', 'Positivity')
   
   # (2) Calculate TPR, AUC, and TPR10 for each race/ethnicity
   for (i in 1:length(race_eth_all)) {
@@ -67,226 +73,329 @@ calculate_results <- function(model, model_yhat_fn) {
     results[i, 2] <- calculate_FPR(y, yhat)
     results[i, c(3, 4)] <- calculate_AUC(y, yhat)
     results[i, 5] <- mean((yhat > 0.5) == y)
+    results[i, 6] <- calculate_Positivity(yhat)
   }
   
   return(data.frame(results))
 }
 ```
 
+```{r}
+read_race_data <- function(file, outome, unaware=FALSE) {
+  x <<- fread(file)
+  x$outcome <- as.numeric(x$outcome == outcome)
+  
+  AmeriIndian_x <<- x %>% filter(race_AmeriIndian == 1)
+  AmeriIndian_y <<- AmeriIndian_x$outcome
+  AmeriIndian_x <<- AmeriIndian_x %>% select(-outcome)
+  if (unaware)
+    AmeriIndian_x <<- AmeriIndian_x %>% select(-race_AmeriIndian, -race_AsianPI, -race_Black, -race_White)
+  
+  AsianPI_x <<- x %>% filter(race_AsianPI == 1)
+  AsianPI_y <<- AsianPI_x$outcome
+  AsianPI_x <<- AsianPI_x %>% select(-outcome)
+  if (unaware)
+    AsianPI_x <<- AsianPI_x %>% select(-race_AmeriIndian, -race_AsianPI, -race_Black, -race_White)
+  
+  Black_x <<- x %>% filter(race_Black == 1)
+  Black_y <<- Black_x$outcome
+  Black_x <<- Black_x %>% select(-outcome)
+  if (unaware)
+    Black_x <<- Black_x %>% select(-race_AmeriIndian, -race_AsianPI, -race_Black, -race_White)
+  
+  White_x <<- x %>% filter(race_White == 1)
+  White_y <<- White_x$outcome
+  White_x <<- White_x %>% select(-outcome)
+  if (unaware)
+    White_x <<- White_x %>% select(-race_AmeriIndian, -race_AsianPI, -race_Black, -race_White)
+}
+```
+
 # Fairness evaluations
 
-# Early Stillbirth
+## Early Stillbirth
 
 ```{r}
-x <- fread('../data/final/stillbirth_test.csv')
+file <- '../data/final/stillbirth_test.csv'
 outcome <- 'early stillbirth'
-x$outcome <- as.numeric(x$outcome == outcome)
-
-AmeriIndian_x <- x %>% filter(race_AmeriIndian == 1)
-AmeriIndian_y <- AmeriIndian_x$outcome
-AmeriIndian_x <- AmeriIndian_x %>% select(-outcome)
-
-AsianPI_x <- x %>% filter(race_AsianPI == 1)
-AsianPI_y <- AsianPI_x$outcome
-AsianPI_x <- AsianPI_x %>% select(-outcome)
-
-Black_x <- x %>% filter(race_Black == 1)
-Black_y <- Black_x$outcome
-Black_x <- Black_x %>% select(-outcome)
-
-White_x <- x %>% filter(race_White == 1)
-White_y <- White_x$outcome
-White_x <- White_x %>% select(-outcome)
 ```
-
-## Logistic Regression
 
 ```{r}
-lr_early <- load_pickle("../models/lr_early")
-lr_early_r <- calculate_results(model = lr_early, model_yhat_fn = calculate_yhat_sklearn)
-lr_early_r
-```
+## RACE-AWARE Columns
+read_race_data(file, outcome, unaware = FALSE)
 
-## LightGBM
+# Logistic Regression
+lr_early_aware <- load_pickle("../models/lr_early_aware")
+lr_early_aware_r <- calculate_results(model = lr_early_aware, model_yhat_fn = calculate_yhat_sklearn)
+lr_early_aware_r
 
-```{r}
-gb_early <- load_pickle("../models/gb_early")
-gb_early_r <- calculate_results(model = gb_early, model_yhat_fn = calculate_yhat_sklearn)
-gb_early_r
-```
+# LightGBM
+gb_early_aware <- load_pickle("../models/gb_early_aware")
+gb_early_aware_r <- calculate_results(model = gb_early_aware, model_yhat_fn = calculate_yhat_sklearn)
+gb_early_aware_r
 
-## ReLU Network
-
-```{r}
-relu_early <- load_NN("../models/lrelu_early")
-relu_early_r <- calculate_results(relu_early, calculate_yhat_NN)
-relu_early_r
-```
-
+# ReLU Network
+relu_early_aware <- load_NN("../models/lrelu_early_aware")
+relu_early_aware_r <- calculate_results(relu_early_aware, calculate_yhat_NN)
+relu_early_aware_r
 
 ## SELU Network
-
-```{r}
-selu_early <- load_NN("../models/selu_early")
-selu_early_r <- calculate_results(selu_early, calculate_yhat_NN)
-selu_early_r
+selu_early_aware <- load_NN("../models/selu_early_aware")
+selu_early_aware_r <- calculate_results(selu_early_aware, calculate_yhat_NN)
+selu_early_aware_r
 ```
 
-# Late Stillbirth
+```{r}
+## RACE-UNAWARE Columns
+read_race_data(file, outcome, unaware = TRUE)
+
+# Logistic Regression
+lr_early_unaware <- load_pickle("../models/lr_early_unaware")
+lr_early_unaware_r <- calculate_results(model = lr_early_unaware, model_yhat_fn = calculate_yhat_sklearn)
+lr_early_unaware_r
+
+# LightGBM
+gb_early_unaware <- load_pickle("../models/gb_early_unaware")
+gb_early_unaware_r <- calculate_results(model = gb_early_unaware, model_yhat_fn = calculate_yhat_sklearn)
+gb_early_unaware_r
+
+# ReLU Network
+relu_early_unaware <- load_NN("../models/lrelu_early_unaware")
+relu_early_unaware_r <- calculate_results(relu_early_unaware, calculate_yhat_NN)
+relu_early_unaware_r
+
+## SELU Network
+selu_early_unaware <- load_NN("../models/selu_early_unaware")
+selu_early_unaware_r <- calculate_results(selu_early_unaware, calculate_yhat_NN)
+selu_early_unaware_r
+```
+
+## Late Stillbirth
 
 ```{r}
-x <- fread('../data/final/stillbirth_test.csv')
+file <- '../data/final/stillbirth_test.csv'
 outcome <- 'late stillbirth'
-x$outcome <- as.numeric(x$outcome == outcome)
-
-AmeriIndian_x <- x %>% filter(race_AmeriIndian == 1)
-AmeriIndian_y <- AmeriIndian_x$outcome
-AmeriIndian_x <- AmeriIndian_x %>% select(-outcome, -race_AmeriIndian, -race_AsianPI, -race_Black, -race_White)
-
-AsianPI_x <- x %>% filter(race_AsianPI == 1)
-AsianPI_y <- AsianPI_x$outcome
-AsianPI_x <- AsianPI_x %>% select(-outcome, -race_AmeriIndian, -race_AsianPI, -race_Black, -race_White)
-
-Black_x <- x %>% filter(race_Black == 1)
-Black_y <- Black_x$outcome
-Black_x <- Black_x %>% select(-outcome, -race_AmeriIndian, -race_AsianPI, -race_Black, -race_White)
-
-White_x <- x %>% filter(race_White == 1)
-White_y <- White_x$outcome
-White_x <- White_x %>% select(-outcome, -race_AmeriIndian, -race_AsianPI, -race_Black, -race_White)
 ```
-
-## Logistic Regression
 
 ```{r}
-lr_late <- load_pickle("../models/lr_late")
-lr_late_r <- calculate_results(model = lr_late, model_yhat_fn = calculate_yhat_sklearn)
-lr_late_r
-```
+## RACE-AWARE Columns
+read_race_data(file, outcome, unaware = FALSE)
 
-## LightGBM
+# Logistic Regression
+lr_late_aware <- load_pickle("../models/lr_late_aware")
+lr_late_aware_r <- calculate_results(model = lr_late_aware, model_yhat_fn = calculate_yhat_sklearn)
+lr_late_aware_r
 
-```{r}
-gb_late <- load_pickle("../models/gb_late")
-gb_late_r <- calculate_results(model = gb_late, model_yhat_fn = calculate_yhat_sklearn)
-gb_late_r
-```
+# LightGBM
+gb_late_aware <- load_pickle("../models/gb_late_aware")
+gb_late_aware_r <- calculate_results(model = gb_late_aware, model_yhat_fn = calculate_yhat_sklearn)
+gb_late_aware_r
 
-## ReLU Network
-
-```{r}
-relu_late <- load_NN("../models/lrelu_late")
-relu_late_r <- calculate_results(relu_late, calculate_yhat_NN)
-relu_late_r
-```
+# ReLU Network
+relu_late_aware <- load_NN("../models/lrelu_late_aware")
+relu_late_aware_r <- calculate_results(relu_late_aware, calculate_yhat_NN)
+relu_late_aware_r
 
 ## SELU Network
-
-```{r}
-selu_late <- load_NN("../models/selu_late")
-selu_late_r <- calculate_results(selu_late, calculate_yhat_NN)
-selu_late_r
+selu_late_aware <- load_NN("../models/selu_late_aware")
+selu_late_aware_r <- calculate_results(selu_late_aware, calculate_yhat_NN)
+selu_late_aware_r
 ```
 
-# Preterm Birth
+```{r}
+## RACE-UNAWARE Columns
+read_race_data(file, outcome, unaware = TRUE)
+
+# Logistic Regression
+lr_late_unaware <- load_pickle("../models/lr_late_unaware")
+lr_late_unaware_r <- calculate_results(model = lr_late_unaware, model_yhat_fn = calculate_yhat_sklearn)
+lr_late_unaware_r
+
+# LightGBM
+gb_late_unaware <- load_pickle("../models/gb_late_unaware")
+gb_late_unaware_r <- calculate_results(model = gb_late_unaware, model_yhat_fn = calculate_yhat_sklearn)
+gb_late_unaware_r
+
+# ReLU Network
+relu_late_unaware <- load_NN("../models/lrelu_late_unaware")
+relu_late_unaware_r <- calculate_results(relu_late_unaware, calculate_yhat_NN)
+relu_late_unaware_r
+
+## SELU Network
+selu_late_unaware <- load_NN("../models/selu_late_unaware")
+selu_late_unaware_r <- calculate_results(selu_late_unaware, calculate_yhat_NN)
+selu_late_unaware_r
+```
+
+## Preterm Birth
 
 ```{r}
-x <- fread('../data/final/preterm_test.csv')
+file <- '../data/final/preterm_test.csv'
 outcome <- 'preterm'
-x$outcome <- as.numeric(x$outcome == outcome)
-
-AmeriIndian_x <- x %>% filter(race_AmeriIndian == 1)
-AmeriIndian_y <- AmeriIndian_x$outcome
-AmeriIndian_x <- AmeriIndian_x %>% select(-outcome)
-
-AsianPI_x <- x %>% filter(race_AsianPI == 1)
-AsianPI_y <- AsianPI_x$outcome
-AsianPI_x <- AsianPI_x %>% select(-outcome)
-
-Black_x <- x %>% filter(race_Black == 1)
-Black_y <- Black_x$outcome
-Black_x <- Black_x %>% select(-outcome)
-
-White_x <- x %>% filter(race_White == 1)
-White_y <- White_x$outcome
-White_x <- White_x %>% select(-outcome)
 ```
 
-## Logistic Regression
 
 ```{r}
-lr_preterm <- load_pickle("../models/lr_preterm")
-lr_preterm_r <- calculate_results(model = lr_preterm, model_yhat_fn = calculate_yhat_sklearn)
-lr_preterm_r
-```
+## RACE-AWARE Columns
+read_race_data(file, outcome, unaware = FALSE)
 
-## LightGBM
+# Logistic Regression
+lr_preterm_aware <- load_pickle("../models/lr_preterm_aware")
+lr_preterm_aware_r <- calculate_results(model = lr_preterm_aware, model_yhat_fn = calculate_yhat_sklearn)
+lr_preterm_aware_r
 
-```{r}
-gb_preterm <- load_pickle("../models/gb_preterm")
-gb_preterm_r <- calculate_results(model = gb_preterm, model_yhat_fn = calculate_yhat_sklearn)
-gb_preterm_r
-```
+# LightGBM
+gb_preterm_aware <- load_pickle("../models/gb_preterm_aware")
+gb_preterm_aware_r <- calculate_results(model = gb_preterm_aware, model_yhat_fn = calculate_yhat_sklearn)
+gb_preterm_aware_r
 
-## ReLU Network
-
-```{r}
-relu_preterm <- load_NN("../models/lrelu_preterm")
-relu_preterm_r <- calculate_results(relu_preterm, calculate_yhat_NN)
-relu_preterm_r
-```
+# ReLU Network
+relu_preterm_aware <- load_NN("../models/lrelu_preterm_aware")
+relu_preterm_aware_r <- calculate_results(relu_preterm_aware, calculate_yhat_NN)
+relu_preterm_aware_r
 
 ## SELU Network
+selu_preterm_aware <- load_NN("../models/selu_preterm_aware")
+selu_preterm_aware_r <- calculate_results(selu_preterm_aware, calculate_yhat_NN)
+selu_preterm_aware_r
+```
 
 ```{r}
-selu_preterm <- load_NN("../models/selu_preterm")
-selu_preterm_r <- calculate_results(selu_preterm, calculate_yhat_NN)
-selu_preterm_r
+## RACE-UNAWARE Columns
+read_race_data(file, outcome, unaware = TRUE)
+
+# Logistic Regression
+lr_preterm_unaware <- load_pickle("../models/lr_preterm_unaware")
+lr_preterm_unaware_r <- calculate_results(model = lr_preterm_unaware, model_yhat_fn = calculate_yhat_sklearn)
+lr_preterm_unaware_r
+
+# LightGBM
+gb_preterm_unaware <- load_pickle("../models/gb_preterm_unaware")
+gb_preterm_unaware_r <- calculate_results(model = gb_preterm_unaware, model_yhat_fn = calculate_yhat_sklearn)
+gb_preterm_unaware_r
+
+# ReLU Network
+relu_preterm_unaware <- load_NN("../models/lrelu_preterm_unaware")
+relu_preterm_unaware_r <- calculate_results(relu_preterm_unaware, calculate_yhat_NN)
+relu_preterm_unaware_r
+
+## SELU Network
+selu_preterm_unaware <- load_NN("../models/selu_preterm_unaware")
+selu_preterm_unaware_r <- calculate_results(selu_preterm_unaware, calculate_yhat_NN)
+selu_preterm_unaware_r
 ```
 
 # Save results
 
 ```{r}
-# lr_early_r$model <- 'lr'
-# lr_early_r$task <- 'early'
-# lr_early_r$raceeth <- rownames(lr_early_r)
-# gb_early_r$model <- 'gb'
-# gb_early_r$task <- 'early'
-# gb_early_r$raceeth <- rownames(gb_early_r)
-# relu_early_r$model <- 'lrelu'
-# relu_early_r$task <- 'early'
-# relu_early_r$raceeth <- rownames(relu_early_r)
-# selu_early_r$model <- 'selu'
-# selu_early_r$task <- 'early'
-# selu_early_r$raceeth <- rownames(selu_early_r)
+# AWARE RESULTS
+lr_early_aware_r$model <- 'lr'
+lr_early_aware_r$task <- 'early'
+lr_early_aware_r$raceeth <- rownames(lr_early_aware_r)
+lr_early_aware_r$aware <- TRUE
+gb_early_aware_r$model <- 'gb'
+gb_early_aware_r$task <- 'early'
+gb_early_aware_r$raceeth <- rownames(gb_early_aware_r)
+gb_early_aware_r$aware <- TRUE
+relu_early_aware_r$model <- 'lrelu'
+relu_early_aware_r$task <- 'early'
+relu_early_aware_r$raceeth <- rownames(relu_early_aware_r)
+relu_early_aware_r$aware <- TRUE
+selu_early_aware_r$model <- 'selu'
+selu_early_aware_r$task <- 'early'
+selu_early_aware_r$raceeth <- rownames(selu_early_aware_r)
+selu_early_aware_r$aware <- TRUE
 
-lr_late_r$model <- 'lr'
-lr_late_r$task <- 'late'
-lr_late_r$raceeth <- rownames(lr_late_r)
-gb_late_r$model <- 'gb'
-gb_late_r$task <- 'late'
-gb_late_r$raceeth <- rownames(gb_late_r)
-relu_late_r$model <- 'lrelu'
-relu_late_r$task <- 'late'
-relu_late_r$raceeth <- rownames(relu_late_r)
-selu_late_r$model <- 'selu'
-selu_late_r$task <- 'late'
-selu_late_r$raceeth <- rownames(selu_late_r)
+lr_late_aware_r$model <- 'lr'
+lr_late_aware_r$task <- 'late'
+lr_late_aware_r$raceeth <- rownames(lr_late_aware_r)
+lr_late_aware_r$aware <- TRUE
+gb_late_aware_r$model <- 'gb'
+gb_late_aware_r$task <- 'late'
+gb_late_aware_r$raceeth <- rownames(gb_late_aware_r)
+gb_late_aware_r$aware <- TRUE
+relu_late_aware_r$model <- 'lrelu'
+relu_late_aware_r$task <- 'late'
+relu_late_aware_r$raceeth <- rownames(relu_late_aware_r)
+relu_late_aware_r$aware <- TRUE
+selu_late_aware_r$model <- 'selu'
+selu_late_aware_r$task <- 'late'
+selu_late_aware_r$raceeth <- rownames(selu_late_aware_r)
+selu_late_aware_r$aware <- TRUE
 
+lr_preterm_aware_r$model <- 'lr'
+lr_preterm_aware_r$task <- 'preterm'
+lr_preterm_aware_r$raceeth <- rownames(lr_preterm_aware_r)
+lr_preterm_aware_r$aware <- TRUE
+gb_preterm_aware_r$model <- 'gb'
+gb_preterm_aware_r$task <- 'preterm'
+gb_preterm_aware_r$raceeth <- rownames(gb_preterm_aware_r)
+gb_preterm_aware_r$aware <- TRUE
+relu_preterm_aware_r$model <- 'lrelu'
+relu_preterm_aware_r$task <- 'preterm'
+relu_preterm_aware_r$raceeth <- rownames(relu_preterm_aware_r)
+relu_preterm_aware_r$aware <- TRUE
+selu_preterm_aware_r$model <- 'selu'
+selu_preterm_aware_r$task <- 'preterm'
+selu_preterm_aware_r$raceeth <- rownames(selu_preterm_aware_r)
+selu_preterm_aware_r$aware <- TRUE
+```
 
-# lr_preterm_r$model <- 'lr'
-# lr_preterm_r$task <- 'preterm'
-# lr_preterm_r$raceeth <- rownames(lr_preterm_r)
-# gb_preterm_r$model <- 'gb'
-# gb_preterm_r$task <- 'preterm'
-# gb_preterm_r$raceeth <- rownames(gb_preterm_r)
-# relu_preterm_r$model <- 'lrelu'
-# relu_preterm_r$task <- 'preterm'
-# relu_preterm_r$raceeth <- rownames(relu_preterm_r)
-# selu_preterm_r$model <- 'selu'
-# selu_preterm_r$task <- 'preterm'
-# selu_preterm_r$raceeth <- rownames(selu_preterm_r)
+```{r}
+# UNAWARE RESULTS
+lr_early_unaware_r$model <- 'lr'
+lr_early_unaware_r$task <- 'early'
+lr_early_unaware_r$raceeth <- rownames(lr_early_unaware_r)
+lr_early_unaware_r$aware <- FALSE
+gb_early_unaware_r$model <- 'gb'
+gb_early_unaware_r$task <- 'early'
+gb_early_unaware_r$raceeth <- rownames(gb_early_unaware_r)
+gb_early_unaware_r$aware <- FALSE
+relu_early_unaware_r$model <- 'lrelu'
+relu_early_unaware_r$task <- 'early'
+relu_early_unaware_r$raceeth <- rownames(relu_early_unaware_r)
+relu_early_unaware_r$aware <- FALSE
+selu_early_unaware_r$model <- 'selu'
+selu_early_unaware_r$task <- 'early'
+selu_early_unaware_r$raceeth <- rownames(selu_early_unaware_r)
+selu_early_unaware_r$aware <- FALSE
 
+lr_late_unaware_r$model <- 'lr'
+lr_late_unaware_r$task <- 'late'
+lr_late_unaware_r$raceeth <- rownames(lr_late_unaware_r)
+lr_late_unaware_r$aware <- FALSE
+gb_late_unaware_r$model <- 'gb'
+gb_late_unaware_r$task <- 'late'
+gb_late_unaware_r$raceeth <- rownames(gb_late_unaware_r)
+gb_late_unaware_r$aware <- FALSE
+relu_late_unaware_r$model <- 'lrelu'
+relu_late_unaware_r$task <- 'late'
+relu_late_unaware_r$raceeth <- rownames(relu_late_unaware_r)
+relu_late_unaware_r$aware <- FALSE
+selu_late_unaware_r$model <- 'selu'
+selu_late_unaware_r$task <- 'late'
+selu_late_unaware_r$raceeth <- rownames(selu_late_unaware_r)
+selu_late_unaware_r$aware <- FALSE
+
+lr_preterm_unaware_r$model <- 'lr'
+lr_preterm_unaware_r$task <- 'preterm'
+lr_preterm_unaware_r$raceeth <- rownames(lr_preterm_unaware_r)
+lr_preterm_unaware_r$aware <- FALSE
+gb_preterm_unaware_r$model <- 'gb'
+gb_preterm_unaware_r$task <- 'preterm'
+gb_preterm_unaware_r$raceeth <- rownames(gb_preterm_unaware_r)
+gb_preterm_unaware_r$aware <- FALSE
+relu_preterm_unaware_r$model <- 'lrelu'
+relu_preterm_unaware_r$task <- 'preterm'
+relu_preterm_unaware_r$raceeth <- rownames(relu_preterm_unaware_r)
+relu_preterm_unaware_r$aware <- FALSE
+selu_preterm_unaware_r$model <- 'selu'
+selu_preterm_unaware_r$task <- 'preterm'
+selu_preterm_unaware_r$raceeth <- rownames(selu_preterm_unaware_r)
+selu_preterm_unaware_r$aware <- FALSE
+```
+
+```{r}
 results_varnames <- ls(pattern = '.+_r$')
 results_combined <- mget(results_varnames) %>%
   bind_rows(.id = 'varname') %>%
@@ -297,8 +406,3 @@ results_combined
 ```{r}
 fwrite(results_combined, '../data/results.csv')
 ```
-
-
-# Notes
-
-> "Further research would also include inspecting the reproducibility of the results beyond the population of the United States with different ML models. The best machine learning models (SELU network, LGBM and averaged ensemble) were able to produce repeatable performance over two data sets. Using these machine learning models, especially for early stillbirth, could provide earlier identification of at-risk pregnancies with high accuracy and provide tools for better utilization of healthcare resources targeted to those needing it most."
