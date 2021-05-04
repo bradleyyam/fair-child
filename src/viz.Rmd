@@ -183,3 +183,20 @@ ggsave('../data/data-models_barplot_breakdown.png', width = 13, height = 9, unit
 #   ggtitle('Breakdown of Positivity Rates by Race/Ethnicity', subtitle = 'Across training data ground truth and each race-aware models\' predictions')
 # ggsave('../data/data-models_barplot_breakdown_aware.png', width = 13, height = 9, units = 'in', dpi=300)
 ```
+
+# Corrplot
+
+```{r}
+library(ggcorrplot)
+
+set.seed(10)
+train_sb <- fread('../data/final/stillbirth_train.csv')
+train_sb$late_sb = ifelse(train_sb$outcome =="late stillbirth", 1, 0)
+train_sb$early_sb = ifelse(train_sb$outcome =="early stillbirth", 1, 0)
+train_sb <- train_sb %>% select(-outcome)
+analy_sb <- sample(1:nrow(train_sb), nrow(train_sb)/4, replace=F)
+r <- cor(train_sb[analy_sb,], use="complete.obs")
+
+ggcorrplot(r, show.legend=T, show.diag=T, hc.order=T, lab=T, lab_size=4, type = "upper",method="square")
+```
+
