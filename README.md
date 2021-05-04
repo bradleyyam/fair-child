@@ -79,7 +79,7 @@ All of our code lives in `/src/`. If you are running a Unix system everything sh
 
 We provide detailed sources for our data in the final report. We have uploaded our own copy of the raw data downloaded directly from CDC and NBER in our google drive. Download data files and place them into appropriate folder structure before running `ingest-clean-realdata.Rmd`
 
-Alternatively, our processed data files are also available on the same drive link in `/data/`.
+Alternatively, our processed data files are also available on the same drive link in `/data/`. The datasets in the drive are under `data v2/final`.
 
 We provide some directions for data exploration in `synthetic-data-exploration.Rmd`, but the user is encouraged to explore the dataset for themselves.
 
