@@ -71,6 +71,29 @@ loaded via a namespace (and not attached):
 [76] ellipsis_0.3.1       ipred_0.9-11
 ```
 
+## Usage
+
+All of our code lives in `/src/`. If you are running a Unix system everything should run fine, but if you are on Windows you may need to alter bits of code that references the os package. If you want to run training on a gpu, some of the activation functions may need to be tweaked for different versions of tensorflow. 
+
+### Data Ingestion and Exploration
+
+We provide detailed sources for our data in the final report. We have uploaded our own copy of the raw data downloaded directly from CDC and NBER in our google drive. Download data files and place them into appropriate folder structure before running `ingest-clean-realdata.Rmd`
+
+Alternatively, our processed data files are also available on the same drive link in `/data/`.
+
+We provide some directions for data exploration in `synthetic-data-exploration.Rmd`, but the user is encouraged to explore the dataset for themselves.
+
+### Model Training
+
+We provide a jupyter notebook `train-all-models.ipynb` to train all the models for our study, including 12 "race-aware" models and 12 "race-unaware" models.
+
+Alternatively, we also provide all our models pre-trained for download from the drive link in `/models/`.
+
+### Model Evaluation and Vizualisation
+
+We provide code to evaluate the fairness of our models with respect to race on the metrics of TPR, FPR and accuracy in `fairness-eval.Rmd` and provide some helpful visualizations of those metrics in `Viz.Rmd`
+
+
 ## Steps
 
 All code to replicate this project may be found in `src/`. We proceed through the source code via the following steps:
