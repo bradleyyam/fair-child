@@ -23,6 +23,8 @@ library(caret)
 
 All CDC data was retrieved through their Vital Statistics online portal: https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm#Fetal_Death. 
 
+Each codebook_base is hand-coded to the specific CDC flatfile format, which are year specific. This code may break if applied to newer data, as it will require a different codebook_base. 
+
 ```{r}
 codebook_base <- tribble(
   ~width, ~name,
@@ -329,6 +331,7 @@ end_flags <-
     "mothers bridged race recode flag",
     "num of prev births flag")
 
+#These are the variables we care about for our final dataset
 fd_selected_columns <- c(
   "Version",
   "Delivery.Year",
@@ -354,6 +357,7 @@ fd_selected_columns <- c(
   "Gestation.Detail.in.Weeks"
 )
 
+#These are the new names of the variables we want in the final dataset
 fd_renamed_columns <- c(
   "Version",
   "DeliveryYear",
@@ -380,6 +384,7 @@ fd_renamed_columns <- c(
   "Preterm"
 )
 
+#These are the variables we care about for our final dataset
 fd_reassign <- c(
   "Version",
   "Delivery.Year",
@@ -406,6 +411,7 @@ fd_reassign <- c(
   "Gestation.Detail.in.Weeks"
 )
 
+#These are the new names of the variables we want in the final dataset
 renamed_columns <- c(
   "Version",
   "DeliveryYear",
@@ -491,25 +497,6 @@ fd_2013_clean <- fd_2013 %>% select(fd_selected_columns_2013) %>%
   mutate(Education = NA, WIC = NA, Smoking = NA, BMI = NA, Height = NA, Weight = NA, GestationalDiabetes = NA, GestationalHypertension = NA, InfertilityTreatment = NA, InfertilityDrugs = NA, ART = NA, PrevCesareans = NA, Stillborn = 1) %>%
   dplyr::rename(Preterm = Gestation.Detail.in.Weeks, DeliveryYear = Delivery.Year, Age = Mother.Single.Year.of.Age, Race = Mother.Race.Recode, PrepregnancySmoking = Smoking, Parity = Live.Birth.Order.Recode, PrepregnancyDiabetes = Diabetes, PrepregnancyHypertension = Prepregnancy.Hpertension, HypertensionEclampsia = Eclampsia) %>%
   select(fd_renamed_columns)
-
-
-  
-# fd_2013_clean <- fd_2013[fd_selected_columns_2013] %>%
-#   mutate(Total.Birth.Order.Recode = Total.Birth.Order.Recode
-#          - Live.Birth.Order.Recode) %>%
-#   mutate(Diabetes=recode(Diabetes, `1`="Y", `2`="N", `8`="U", `9`="U")) %>%
-#   mutate(Prepregnancy.Hpertension=recode(Prepregnancy.Hpertension, `1`="Y", `2`="N", 
-#                                          `8`="U", `9`="U")) %>%
-#   mutate(Eclampsia=recode(Eclampsia, `1`="Y", `2`="N", `8`="U", `9`="U")) %>%
-#   mutate(Education = NA, .after = Mother.Race.Recode) %>%
-#   mutate(WIC = NA, Smoking = NA, BMI = NA, Height = NA, 
-#              Weight = NA, .after = Total.Birth.Order.Recode) %>%
-#   mutate(GestationalDiabetes = NA, .after = Diabetes) %>%
-#   mutate(GestationalHypertension = NA, .after = Prepregnancy.Hpertension) %>%
-#   mutate(InfertilityTreatment = NA, InfertilityDrugs = NA, ART= NA, 
-#              PrevCesareans = NA, Stillborn = 1, Preterm = 0, .after = 
-#                Eclampsia) %>%
-#   set_colnames(fd_renamed_columns)
 
 fwrite(fd_2013_clean, "../data/clean/fd/fd_2013_clean.csv")
 
@@ -615,6 +602,7 @@ This is also really CDC data from the same source, but already parsed into a muc
 
 ```{r}
 
+#the variables we want to rename in the natality column, to match with our fatality data ingested previously
 renamed_columns <- c(
   "Version",
   "DeliveryYear",
